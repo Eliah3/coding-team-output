@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Tic-Tac-Toe Desktop-Spiel mit KI-Gegner">
+    <meta name="author" content="Development Team">
+    <title>Tic-Tac-Toe Spiel</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Tic-Tac-Toe</h1>
+        <nav>
+            <ul>
+                <li><a href="#start">Spiel starten</a></li>
+                <li><a href="#anleitung">Anleitung</a></li>
+                <li><a href="#ueber">Über das Spiel</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="start">
+            <h2>Willkommen bei Tic-Tac-Toe</h2>
+            <p>Spielen Sie gegen den Computer oder einen Freund!</p>
+            <button type="button" id="start-game">Spiel starten</button>
+        </section>
+
+        <section id="game-board" class="hidden">
+            <div class="grid">
+                <button type="button" class="cell" data-index="0"></button>
+                <button type="button" class="cell" data-index="1"></button>
+                <button type="button" class="cell" data-index="2"></button>
+                <button type="button" class="cell" data-index="3"></button>
+                <button type="button" class="cell" data-index="4"></button>
+                <button type="button" class="cell" data-index="5"></button>
+                <button type="button" class="cell" data-index="6"></button>
+                <button type="button" class="cell" data-index="7"></button>
+                <button type="button" class="cell" data-index="8"></button>
+            </div>
+            <div id="status"></div>
+            <button type="button" id="reset-game">Neustart</button>
+        </section>
+
+        <section id="anleitung">
+            <h2>Anleitung</h2>
+            <p>So spielen Sie Tic-Tac-Toe:</p>
+            <ul>
+                <li>Es spielen zwei Spieler: X und O</li>
+                <li>Der erste Spieler setzt sein Symbol in ein Feld</li>
+                <li>Der Gegner setzt sein Symbol in ein leeres Feld</li>
+                <li>Wer zuerst drei Symbole in einer Reihe hat, gewinnt</li>
+            </ul>
+        </section>
+
+        <section id="ueber">
+            <h2>Über das Spiel</h2>
+            <p>Dieses Projekt wurde mit Python und Tkinter entwickelt.</p>
+            <p>Version: 1.0.0</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Tic-Tac-Toe Development Team. Alle Rechte vorbehalten.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
