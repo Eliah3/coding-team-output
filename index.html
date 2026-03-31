@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background">
+        <div class="game-container">
+            <header class="game-header">
+                <h1>Tic-Tac-Toe</h1>
+                <p class="subtitle">Spiel gegen den Computer</p>
+            </header>
+            
+            <div class="status-display">
+                <span id="status-text">Spieler X ist dran</span>
+            </div>
+            
+            <div class="game-board" id="game-board">
+                <button class="cell" data-index="0"></button>
+                <button class="cell" data-index="1"></button>
+                <button class="cell" data-index="2"></button>
+                <button class="cell" data-index="3"></button>
+                <button class="cell" data-index="4"></button>
+                <button class="cell" data-index="5"></button>
+                <button class="cell" data-index="6"></button>
+                <button class="cell" data-index="7"></button>
+                <button class="cell" data-index="8"></button>
+            </div>
+            
+            <div class="game-controls">
+                <button id="restart-btn" class="btn">Neues Spiel</button>
+                <div class="score-board">
+                    <div class="score">
+                        <span class="score-label">Spieler X:</span>
+                        <span id="score-x">0</span>
+                    </div>
+                    <div class="score">
+                        <span class="score-label">Spieler O (KI):</span>
+                        <span id="score-o">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="game-footer">
+                <p>Wähle ein Feld, um deinen Zug zu machen</p>
+            </footer>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

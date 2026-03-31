@@ -1,0 +1,276 @@
+/* Grundlegendes Reset und Variablen */
+:root {
+    --primary-color: #4a90d9;
+    --secondary-color: #2c3e50;
+    --accent-color: #e74c3c;
+    --background-gradient-start: #1a1a2e;
+    --background-gradient-end: #16213e;
+    --container-bg: rgba(255, 255, 255, 0.95);
+    --cell-bg: #f8f9fa;
+    --cell-hover: #e9ecef;
+    --text-color: #2c3e50;
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    --border-radius: 16px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Hintergrund mit animiertem Effekt */
+.background {
+    width: 100%;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 50%, #0f3460 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Dekorative Hintergrund-Elemente */
+.background::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(74, 144, 217, 0.1) 0%, transparent 50%);
+    animation: rotate 20s linear infinite;
+}
+
+.background::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    right: -30%;
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(circle, rgba(231, 76, 60, 0.08) 0%, transparent 40%);
+    animation: rotate 15s linear infinite reverse;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Spiel-Container */
+.game-container {
+    background: var(--container-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 40px;
+    max-width: 450px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+}
+
+/* Header */
+.game-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.game-header h1 {
+    color: var(--secondary-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.subtitle {
+    color: #7f8c8d;
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+/* Status-Anzeige */
+.status-display {
+    background: linear-gradient(135deg, var(--primary-color), #357abd);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    box-shadow: 0 4px 15px rgba(74, 144, 217, 0.3);
+}
+
+/* Spielbrett */
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 25px;
+    background: var(--secondary-color);
+    padding: 10px;
+    border-radius: 12px;
+}
+
+.cell {
+    aspect-ratio: 1;
+    background: var(--cell-bg);
+    border: none;
+    border-radius: 8px;
+    font-size: 3rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--secondary-color);
+}
+
+.cell:hover:not(.taken) {
+    background: var(--cell-hover);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cell.taken {
+    cursor: not-allowed;
+}
+
+.cell.x {
+    color: var(--primary-color);
+}
+
+.cell.o {
+    color: var(--accent-color);
+}
+
+/* Gewonnene Zellen hervorheben */
+.cell.winner {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Spielsteuerung */
+.game-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.btn {
+    background: linear-gradient(135deg, var(--primary-color), #357abd);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.btn:hover {
+    background: linear-gradient(135deg, #357abd, #2c6cb3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 144, 217, 0.4);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Punktestand */
+.score-board {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.score {
+    flex: 1;
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    border: 2px solid #e9ecef;
+}
+
+.score-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    margin-bottom: 5px;
+}
+
+.score span:last-child {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+}
+
+#score-x {
+    color: var(--primary-color) !important;
+}
+
+#score-o {
+    color: var(--accent-color) !important;
+}
+
+/* Footer */
+.game-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.game-footer p {
+    color: #95a5a6;
+    font-size: 0.9rem;
+}
+
+/* Responsive Anpassungen */
+@media (max-width: 480px) {
+    .game-container {
+        padding: 25px;
+    }
+    
+    .game-header h1 {
+        font-size: 2rem;
+    }
+    
+    .cell {
+        font-size: 2.5rem;
+    }
+    
+    .score-board {
+        flex-direction: column;
+    }
+}
