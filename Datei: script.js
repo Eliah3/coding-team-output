@@ -1,14 +1,14 @@
 /**
- * Spiel-Logik für das Desktop-Spiel
- * Enthält: Kollisionserkennung, Scoring, Neustart, Gegner/Hindernisse, Pause, Schwierigkeit
+ * Spiel-Logik für Tic-Tac-Toe / Snake-Spiel
+ * Enthält: Kollisionserkennung, Scoring, Neustart, Pause, Schwierigkeitsgrade
  */
 
 // ==================== KONSTANTEN ====================
-const GAME_CONSTANTS = {
+const GAME_CONFIG = {
     // Spielfeldgröße
-    GRID_WIDTH: 800,
-    GRID_HEIGHT: 600,
-    CELL_SIZE: 40,
+    GRID_WIDTH: 20,
+    GRID_HEIGHT: 20,
+    CELL_SIZE: 20,
     
     // Schwierigkeitsstufen
     DIFFICULTY: {
@@ -17,187 +17,159 @@ const GAME_CONSTANTS = {
         HARD: 'hard'
     },
     
-    // Geschwindigkeit basierend auf Schwierigkeit
+    // Geschwindigkeit basierend auf Schwierigkeit (ms zwischen Updates)
     SPEED: {
+        easy: 200,
+        medium: 150,
+        hard: 100
+    },
+    
+    // Anzahl der Gegner/Hindernisse basierend auf Schwierigkeit
+    ENEMY_COUNT: {
         easy: 3,
         medium: 5,
-        hard: 7
+        hard: 8
     },
     
-    // Spawn-Intervalle (in Millisekunden)
-    SPAWN_INTERVAL: {
-        easy: 3000,
-        medium: 2000,
-        hard: 1000
-    },
-    
-    // Farben
-    COLORS: {
-        PLAYER: '#00FF00',
-        ENEMY: '#FF0000',
-        OBSTACLE: '#FFA500',
-        BACKGROUND: '#000000',
-        TEXT: '#FFFFFF',
-        UI_BACKGROUND: 'rgba(0, 0, 0, 0.8)'
-    },
-    
-    // Spielergröße
-    PLAYER_SIZE: 30,
-    ENEMY_SIZE: 25,
-    OBSTACLE_SIZE: 35
+    OBSTACLE_COUNT: {
+        easy: 2,
+        medium: 4,
+        hard: 6
+    }
 };
 
-// ==================== HAUPTKLASSE ====================
+// Farbkonstanten
+const COLORS = {
+    PLAYER: '#4CAF50',      // Grün
+    ENEMY: '#F44336',       // Rot
+    OBSTACLE: '#9E9E9E',    // Grau
+    FOOD: '#FFEB3B',        // Gelb
+    BACKGROUND: '#212121',  // Dunkelgrau
+    GRID: '#333333',        // Hellgrau
+    TEXT: '#FFFFFF',        // Weiß
+    UI_BG: 'rgba(0, 0, 0, 0.8)'
+};
+
+// ==================== SPIELKLASSE ====================
 class Game {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
         
         // Spielfeld
-        this.width = GAME_CONSTANTS.GRID_WIDTH;
-        this.height = GAME_CONSTANTS.GRID_HEIGHT;
+        this.width = GAME_CONFIG.GRID_WIDTH;
+        this.height = GAME_CONFIG.GRID_HEIGHT;
+        this.cellSize = GAME_CONFIG.CELL_SIZE;
+        
+        // Canvas-Größe setzen
+        this.canvas.width = this.width * this.cellSize;
+        this.canvas.height = this.height * this.cellSize;
         
         // Spielstatus
         this.isRunning = false;
         this.isPaused = false;
         this.isGameOver = false;
         this.score = 0;
-        this.difficulty = GAME_CONSTANTS.DIFFICULTY.MEDIUM;
+        this.difficulty = GAME_CONFIG.DIFFICULTY.MEDIUM;
         
         // Spielobjekte
         this.player = null;
         this.enemies = [];
         this.obstacles = [];
+        this.food = null;
         
-        // Timer für Spawning
-        this.spawnTimer = null;
-        this.gameLoopId = null;
+        // Timer für Spielschleife
+        this.gameLoop = null;
+        this.lastUpdateTime = 0;
         
-        // Initialisierung
-        this._init();
-    }
-    
-    /**
-     * Initialisiert das Spiel
-     */
-    _init() {
-        this._setupCanvas();
-        this._createPlayer();
-        this._setupEventListeners();
-        this._drawInitialScreen();
-    }
-    
-    /**
-     * Richtet den Canvas ein
-     */
-    _setupCanvas() {
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-    }
-    
-    /**
-     * Erstellt den Spieler
-     */
-    _createPlayer() {
-        this.player = {
-            x: this.width / 2,
-            y: this.height / 2,
-            size: GAME_CONSTANTS.PLAYER_SIZE,
-            speed: GAME_CONSTANTS.SPEED[this.difficulty],
-            dx: 0,
-            dy: 0
+        // Logging
+        this.logger = {
+            info: (msg) => console.log(`[INFO] ${new Date().toISOString()} - ${msg}`),
+            warn: (msg) => console.warn(`[WARN] ${new Date().toISOString()} - ${msg}`),
+            error: (msg) => console.error(`[ERROR] ${new Date().toISOString()} - ${msg}`)
         };
+        
+        // Event-Listener für Tastatur
+        this._setupKeyboardListeners();
+        
+        this.logger.info('Spiel initialisiert');
     }
     
-    /**
-     * Richtet Event-Listener ein
-     */
-    _setupEventListeners() {
-        // Tastatursteuerung
-        document.addEventListener('keydown', (e) => this._handleKeyDown(e));
-        document.addEventListener('keyup', (e) => this._handleKeyUp(e));
+    // ==================== EVENT LISTENER ====================
+    _setupKeyboardListeners() {
+        document.addEventListener('keydown', (e) => this._handleKeydown(e));
     }
     
-    /**
-     * Behandelt Tastendruck
-     */
-    _handleKeyDown(e) {
-        if (this.isGameOver) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                this.restart();
-            }
-            return;
+    _handleKeydown(event) {
+        // Verhindert Standard-Scrolling bei Pfeiltasten
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
+            event.preventDefault();
         }
         
-        if (e.key === 'p' || e.key === 'P') {
+        // Leertaste: Pause umschalten
+        if (event.key === ' ') {
             this.togglePause();
             return;
         }
         
-        if (this.isPaused) return;
+        // R: Neustart
+        if (event.key === 'r' || event.key === 'R') {
+            this.restart();
+            return;
+        }
         
-        switch(e.key) {
-            case 'ArrowUp':
-            case 'w':
-            case 'W':
-                this.player.dy = -this.player.speed;
-                break;
-            case 'ArrowDown':
-            case 's':
-            case 'S':
-                this.player.dy = this.player.speed;
-                break;
-            case 'ArrowLeft':
-            case 'a':
-            case 'A':
-                this.player.dx = -this.player.speed;
-                break;
-            case 'ArrowRight':
-            case 'd':
-            case 'D':
-                this.player.dx = this.player.speed;
-                break;
+        // Nur bewegen wenn nicht pausiert und Spiel läuft
+        if (!this.isPaused && this.isRunning && !this.isGameOver) {
+            this._handleMovement(event.key);
         }
     }
     
     /**
-     * Behandelt Tastenloslassung
+     * Behandelt die Spielerbewegung basierend auf Tastatureingaben
+     * @param {string} key - Gedrückte Taste
      */
-    _handleKeyUp(e) {
-        if (this.isPaused || this.isGameOver) return;
+    _handleMovement(key) {
+        if (!this.player) return;
         
-        switch(e.key) {
+        let newDirection = null;
+        
+        switch (key) {
             case 'ArrowUp':
             case 'w':
             case 'W':
+                newDirection = { x: 0, y: -1 };
+                break;
             case 'ArrowDown':
             case 's':
             case 'S':
-                this.player.dy = 0;
+                newDirection = { x: 0, y: 1 };
                 break;
             case 'ArrowLeft':
             case 'a':
             case 'A':
+                newDirection = { x: -1, y: 0 };
+                break;
             case 'ArrowRight':
             case 'd':
             case 'D':
-                this.player.dx = 0;
+                newDirection = { x: 1, y: 0 };
                 break;
+        }
+        
+        // Verhindere 180-Grad-Drehung
+        if (newDirection) {
+            const currentDir = this.player.direction;
+            if (currentDir && 
+                newDirection.x === -currentDir.x && 
+                newDirection.y === -currentDir.y) {
+                return;
+            }
+            this.player.direction = newDirection;
+            this.logger.info(`Spieler bewegt sich: (${newDirection.x}, ${newDirection.y})`);
         }
     }
     
-    /**
-     * Zeichnet den anfänglichen Bildschirm
-     */
-    _drawInitialScreen() {
-        this._clearCanvas();
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.TEXT;
-        this.ctx.font = '30px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('Drücke ENTER um zu starten', this.width / 2, this.height / 2);
-        this.ctx.font = '20px Arial';
-        this.ctx.fillText('P: Pause | WASD/ Pfeiltasten: Bewegung', this.width / 2, this.height / 2 + 40);
-    }
+    // ==================== SPIELSTEUERUNG ====================
     
     /**
      * Startet das Spiel
@@ -205,347 +177,397 @@ class Game {
     start() {
         if (this.isRunning) return;
         
+        this._initializeGame();
         this.isRunning = true;
         this.isPaused = false;
         this.isGameOver = false;
-        this.score = 0;
         
-        this._createPlayer();
-        this.enemies = [];
-        this.obstacles = [];
-        
-        this._startSpawning();
+        this.logger.info('Spiel gestartet');
         this._gameLoop();
     }
     
     /**
-     * Startet das Spawnen von Gegnern und Hindernissen
+     * Initialisiert das Spiel (Spieler, Gegner, Hindernisse, Essen)
      */
-    _startSpawning() {
-        if (this.spawnTimer) {
-            clearInterval(this.spawnTimer);
-        }
+    _initializeGame() {
+        this.score = 0;
+        this.enemies = [];
+        this.obstacles = [];
         
-        const interval = GAME_CONSTANTS.SPAWN_INTERVAL[this.difficulty];
+        // Spieler in der Mitte initialisieren
+        this.player = {
+            x: Math.floor(this.width / 2),
+            y: Math.floor(this.height / 2),
+            direction: { x: 1, y: 0 },
+            body: [
+                { x: Math.floor(this.width / 2), y: Math.floor(this.height / 2) },
+                { x: Math.floor(this.width / 2) - 1, y: Math.floor(this.height / 2) },
+                { x: Math.floor(this.width / 2) - 2, y: Math.floor(this.height / 2) }
+            ]
+        };
         
-        this.spawnTimer = setInterval(() => {
-            if (!this.isPaused && !this.isGameOver) {
-                this._spawnEnemy();
-                // Auch Hindernisse spawnen (seltener)
-                if (Math.random() < 0.3) {
-                    this._spawnObstacle();
-                }
+        // Gegner generieren
+        this._generateEnemies();
+        
+        // Hindernisse generieren
+        this._generateObstacles();
+        
+        // Essen generieren
+        this._generateFood();
+        
+        this.logger.info('Spielobjekte initialisiert');
+    }
+    
+    /**
+     * Generiert Gegner an zufälligen Positionen
+     */
+    _generateEnemies() {
+        const enemyCount = GAME_CONFIG.ENEMY_COUNT[this.difficulty];
+        
+        for (let i = 0; i < enemyCount; i++) {
+            let position;
+            let validPosition = false;
+            
+            // Finde gültige Position (nicht auf Spieler oder anderen Gegnern)
+            while (!validPosition) {
+                position = {
+                    x: Math.floor(Math.random() * this.width),
+                    y: Math.floor(Math.random() * this.height)
+                };
+                
+                validPosition = this._isValidSpawnPosition(position, [this.player?.body || []]);
             }
-        }, interval);
-    }
-    
-    /**
-     * Erstellt einen neuen Gegner
-     */
-    _spawnEnemy() {
-        const side = Math.floor(Math.random() * 4);
-        let x, y;
-        
-        switch(side) {
-            case 0: // Oben
-                x = Math.random() * this.width;
-                y = -GAME_CONSTANTS.ENEMY_SIZE;
-                break;
-            case 1: // Rechts
-                x = this.width + GAME_CONSTANTS.ENEMY_SIZE;
-                y = Math.random() * this.height;
-                break;
-            case 2: // Unten
-                x = Math.random() * this.width;
-                y = this.height + GAME_CONSTANTS.ENEMY_SIZE;
-                break;
-            case 3: // Links
-                x = -GAME_CONSTANTS.ENEMY_SIZE;
-                y = Math.random() * this.height;
-                break;
+            
+            this.enemies.push({
+                x: position.x,
+                y: position.y,
+                direction: this._getRandomDirection(),
+                color: COLORS.ENEMY
+            });
         }
         
-        // Richtung zum Spieler berechnen
-        const angle = Math.atan2(this.player.y - y, this.player.x - x);
-        const speed = GAME_CONSTANTS.SPEED[this.difficulty] * 0.7;
-        
-        this.enemies.push({
-            x: x,
-            y: y,
-            size: GAME_CONSTANTS.ENEMY_SIZE,
-            dx: Math.cos(angle) * speed,
-            dy: Math.sin(angle) * speed
-        });
+        this.logger.info(`${enemyCount} Gegner generiert`);
     }
     
     /**
-     * Erstellt ein neues Hindernis
+     * Generiert Hindernisse an zufälligen Positionen
      */
-    _spawnObstacle() {
-        const x = Math.random() * (this.width - GAME_CONSTANTS.OBSTACLE_SIZE * 2) + GAME_CONSTANTS.OBSTACLE_SIZE;
-        const y = Math.random() * (this.height - GAME_CONSTANTS.OBSTACLE_SIZE * 2) + GAME_CONSTANTS.OBSTACLE_SIZE;
+    _generateObstacles() {
+        const obstacleCount = GAME_CONFIG.OBSTACLE_COUNT[this.difficulty];
         
-        // Nicht zu nah am Spieler spawnen
-        const distToPlayer = Math.hypot(x - this.player.x, y - this.player.y);
-        if (distToPlayer < 100) return;
+        for (let i = 0; i < obstacleCount; i++) {
+            let position;
+            let validPosition = false;
+            
+            while (!validPosition) {
+                position = {
+                    x: Math.floor(Math.random() * this.width),
+                    y: Math.floor(Math.random() * this.height)
+                };
+                
+                const occupiedPositions = [
+                    ...(this.player?.body || []),
+                    ...this.enemies,
+                    ...this.obstacles
+                ];
+                
+                validPosition = this._isValidSpawnPosition(position, occupiedPositions);
+            }
+            
+            this.obstacles.push({
+                x: position.x,
+                y: position.y,
+                color: COLORS.OBSTACLE
+            });
+        }
         
-        this.obstacles.push({
-            x: x,
-            y: y,
-            size: GAME_CONSTANTS.OBSTACLE_SIZE
-        });
+        this.logger.info(`${obstacleCount} Hindernisse generiert`);
     }
+    
+    /**
+     * Generiert Essen an zufälliger Position
+     */
+    _generateFood() {
+        let position;
+        let validPosition = false;
+        
+        while (!validPosition) {
+            position = {
+                x: Math.floor(Math.random() * this.width),
+                y: Math.floor(Math.random() * this.height)
+            };
+            
+            const occupiedPositions = [
+                ...(this.player?.body || []),
+                ...this.enemies,
+                ...this.obstacles
+            ];
+            
+            validPosition = this._isValidSpawnPosition(position, occupiedPositions);
+        }
+        
+        this.food = {
+            x: position.x,
+            y: position.y,
+            color: COLORS.FOOD
+        };
+        
+        this.logger.info('Essen generiert');
+    }
+    
+    /**
+     * Prüft ob eine Position gültig für Spawn ist
+     * @param {Object} position - Zu prüfende Position {x, y}
+     * @param {Array} occupiedPositions - Array von besetzten Positionen
+     * @returns {boolean}
+     */
+    _isValidSpawnPosition(position, occupiedPositions) {
+        return !occupiedPositions.some(pos => 
+            pos.x === position.x && pos.y === position.y
+        );
+    }
+    
+    /**
+     * Gibt eine zufällige Richtung zurück
+     * @returns {Object} Richtung {x, y}
+     */
+    _getRandomDirection() {
+        const directions = [
+            { x: 0, y: -1 }, // Hoch
+            { x: 0, y: 1 },  // Runter
+            { x: -1, y: 0 }, // Links
+            { x: 1, y: 0 }   // Rechts
+        ];
+        return directions[Math.floor(Math.random() * directions.length)];
+    }
+    
+    /**
+     * Pausiert oder setzt das Spiel fort
+     */
+    togglePause() {
+        if (!this.isRunning || this.isGameOver) return;
+        
+        this.isPaused = !this.isPaused;
+        
+        if (this.isPaused) {
+            this.logger.info('Spiel pausiert');
+        } else {
+            this.logger.info('Spiel fortgesetzt');
+            this._gameLoop();
+        }
+    }
+    
+    /**
+     * Setzt den Schwierigkeitsgrad
+     * @param {string} difficulty - 'easy', 'medium' oder 'hard'
+     */
+    setDifficulty(difficulty) {
+        if (!Object.values(GAME_CONFIG.DIFFICULTY).includes(difficulty)) {
+            this.logger.warn(`Ungültiger Schwierigkeitsgrad: ${difficulty}`);
+            return;
+        }
+        
+        this.difficulty = difficulty;
+        this.logger.info(`Schwierigkeitsgrad gesetzt: ${difficulty}`);
+        
+        // Wenn Spiel läuft, neu starten
+        if (this.isRunning) {
+            this.restart();
+        }
+    }
+    
+    /**
+     * Startet das Spiel neu
+     */
+    restart() {
+        this.logger.info('Spiel wird neu gestartet');
+        
+        // Alten Loop stoppen
+        if (this.gameLoop) {
+            clearTimeout(this.gameLoop);
+        }
+        
+        this.isRunning = false;
+        this.isPaused = false;
+        this.isGameOver = false;
+        
+        this.start();
+    }
+    
+    // ==================== SPIELLOOP ====================
     
     /**
      * Haupt-Spielschleife
      */
     _gameLoop() {
-        if (!this.isRunning) return;
+        if (!this.isRunning || this.isPaused || this.isGameOver) return;
         
-        if (!this.isPaused && !this.isGameOver) {
+        const currentTime = Date.now();
+        const speed = GAME_CONFIG.SPEED[this.difficulty];
+        
+        if (currentTime - this.lastUpdateTime >= speed) {
             this._update();
             this._draw();
+            this.lastUpdateTime = currentTime;
         }
         
-        this.gameLoopId = requestAnimationFrame(() => this._gameLoop());
+        this.gameLoop = requestAnimationFrame(() => this._gameLoop());
     }
     
     /**
      * Aktualisiert den Spielzustand
      */
     _update() {
-        this._updatePlayer();
-        this._updateEnemies();
+        if (!this.player) return;
+        
+        // Spieler bewegen
+        this._movePlayer();
+        
+        // Gegner bewegen
+        this._moveEnemies();
+        
+        // Kollisionserkennung
         this._checkCollisions();
-        this._updateScore();
-    }
-    
-    /**
-     * Aktualisiert die Spielerposition
-     */
-    _updatePlayer() {
-        this.player.x += this.player.dx;
-        this.player.y += this.player.dy;
         
-        // Spielfeldgrenzen
-        this.player.x = Math.max(this.player.size / 2, 
-            Math.min(this.width - this.player.size / 2, this.player.x));
-        this.player.y = Math.max(this.player.size / 2, 
-            Math.min(this.height - this.player.size / 2, this.player.y));
+        // Essen einsammeln
+        this._checkFoodCollection();
     }
     
     /**
-     * Aktualisiert die Gegnerpositionen
+     * Bewegt den Spieler
      */
-    _updateEnemies() {
+    _movePlayer() {
+        if (!this.player || !this.player.direction) return;
+        
+        const head = { ...this.player.body[0] };
+        head.x += this.player.direction.x;
+        head.y += this.player.direction.y;
+        
+        // Wand-Kollision (Wrap-Around)
+        if (head.x < 0) head.x = this.width - 1;
+        if (head.x >= this.width) head.x = 0;
+        if (head.y < 0) head.y = this.height - 1;
+        if (head.y >= this.height) head.y = 0;
+        
+        // Körper bewegen
+        this.player.body.unshift(head);
+        this.player.body.pop();
+        
+        this.logger.debug(`Spieler bewegt zu: (${head.x}, ${head.y})`);
+    }
+    
+    /**
+     * Bewegt die Gegner
+     */
+    _moveEnemies() {
         this.enemies.forEach(enemy => {
-            enemy.x += enemy.dx;
-            enemy.y += enemy.dy;
-            
-            // Gegner zum Spieler bewegen (Tracking)
-            const angle = Math.atan2(this.player.y - enemy.y, this.player.x - enemy.x);
-            const trackingSpeed = GAME_CONSTANTS.SPEED[this.difficulty] * 0.3;
-            enemy.dx += Math.cos(angle) * trackingSpeed * 0.1;
-            enemy.dy += Math.sin(angle) * trackingSpeed * 0.1;
-            
-            // Geschwindigkeit begrenzen
-            const maxSpeed = GAME_CONSTANTS.SPEED[this.difficulty];
-            const speed = Math.hypot(enemy.dx, enemy.dy);
-            if (speed > maxSpeed) {
-                enemy.dx = (enemy.dx / speed) * maxSpeed;
-                enemy.dy = (enemy.dy / speed) * maxSpeed;
+            // Zufällige Richtungsänderung mit 20% Wahrscheinlichkeit
+            if (Math.random() < 0.2) {
+                enemy.direction = this._getRandomDirection();
             }
-        });
-        
-        // Entferne Gegner außerhalb des Bildschirms
-        this.enemies = this.enemies.filter(enemy => {
-            return enemy.x > -50 && enemy.x < this.width + 50 &&
-                   enemy.y > -50 && enemy.y < this.height + 50;
+            
+            enemy.x += enemy.direction.x;
+            enemy.y += enemy.direction.y;
+            
+            // Wrap-Around für Gegner
+            if (enemy.x < 0) enemy.x = this.width - 1;
+            if (enemy.x >= this.width) enemy.x = 0;
+            if (enemy.y < 0) enemy.y = this.height - 1;
+            if (enemy.y >= this.height) enemy.y = 0;
         });
     }
     
+    // ==================== KOLLISIONSERKENNUNG ====================
+    
     /**
-     * Prüft Kollisionen zwischen Objekten
+     * Prüft alle Kollisionen
      */
     _checkCollisions() {
-        // Kollision mit Gegnern
+        if (!this.player || !this.player.body[0]) return;
+        
+        const playerHead = this.player.body[0];
+        
+        // 1. Kollision mit Gegnern
         for (const enemy of this.enemies) {
-            if (this._checkCircleCollision(this.player, enemy)) {
+            if (this._checkCollision(playerHead, enemy)) {
+                this.logger.warn('Kollision mit Gegner!');
                 this._gameOver();
                 return;
             }
         }
         
-        // Kollision mit Hindernissen
+        // 2. Kollision mit Hindernissen
         for (const obstacle of this.obstacles) {
-            if (this._checkCircleCollision(this.player, obstacle)) {
-                this._handleObstacleCollision(obstacle);
+            if (this._checkCollision(playerHead, obstacle)) {
+                this.logger.warn('Kollision mit Hindernis!');
+                this._gameOver();
+                return;
+            }
+        }
+        
+        // 3. Kollision mit eigenem Körper (ab Index 1)
+        for (let i = 1; i < this.player.body.length; i++) {
+            if (this._checkCollision(playerHead, this.player.body[i])) {
+                this.logger.warn('Kollision mit eigenem Körper!');
+                this._gameOver();
+                return;
             }
         }
     }
     
     /**
-     * Prüft Kollision zwischen zwei kreisförmigen Objekten
+     * Prüft ob zwei Positionen kollidieren
+     * @param {Object} pos1 - Erste Position {x, y}
+     * @param {Object} pos2 - Zweite Position {x, y}
+     * @returns {boolean}
      */
-    _checkCircleCollision(obj1, obj2) {
-        const dx = obj1.x - obj2.x;
-        const dy = obj1.y - obj2.y;
-        const distance = Math.hypot(dx, dy);
-        return distance < (obj1.size / 2 + obj2.size / 2);
+    _checkCollision(pos1, pos2) {
+        return pos1.x === pos2.x && pos1.y === pos2.y;
     }
     
     /**
-     * Behandelt Kollision mit Hindernis
+     * Prüft ob Essen eingesammelt wurde
      */
-    _handleObstacleCollision(obstacle) {
-        // Spieler wird zurückgeschoben
-        const dx = this.player.x - obstacle.x;
-        const dy = this.player.y - obstacle.y;
-        const distance = Math.hypot(dx, dy);
+    _checkFoodCollection() {
+        if (!this.player || !this.player.body[0] || !this.food) return;
         
-        if (distance > 0) {
-            const pushDistance = 10;
-            this.player.x += (dx / distance) * pushDistance;
-            this.player.y += (dy / distance) * pushDistance;
-        }
+        const playerHead = this.player.body[0];
         
-        // Kleine Strafe für Kollision mit Hindernis
-        this.score = Math.max(0, this.score - 5);
-    }
-    
-    /**
-     * Aktualisiert den Score
-     */
-    _updateScore() {
-        // Score basierend auf Zeit erhöhen
-        this.score += 1;
-    }
-    
-    /**
-     * Zeichnet das Spiel
-     */
-    _draw() {
-        this._clearCanvas();
-        this._drawObstacles();
-        this._drawEnemies();
-        this._drawPlayer();
-        this._drawUI();
-    }
-    
-    /**
-     * Löscht den Canvas
-     */
-    _clearCanvas() {
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.BACKGROUND;
-        this.ctx.fillRect(0, 0, this.width, this.height);
-    }
-    
-    /**
-     * Zeichnet den Spieler
-     */
-    _drawPlayer() {
-        this.ctx.beginPath();
-        this.ctx.arc(this.player.x, this.player.y, this.player.size / 2, 0, Math.PI * 2);
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.PLAYER;
-        this.ctx.fill();
-        this.ctx.closePath();
-        
-        // Spieler-Outline
-        this.ctx.beginPath();
-        this.ctx.arc(this.player.x, this.player.y, this.player.size / 2 + 2, 0, Math.PI * 2);
-        this.ctx.strokeStyle = '#FFFFFF';
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-        this.ctx.closePath();
-    }
-    
-    /**
-     * Zeichnet die Gegner
-     */
-    _drawEnemies() {
-        this.enemies.forEach(enemy => {
-            this.ctx.beginPath();
-            this.ctx.arc(enemy.x, enemy.y, enemy.size / 2, 0, Math.PI * 2);
-            this.ctx.fillStyle = GAME_CONSTANTS.COLORS.ENEMY;
-            this.ctx.fill();
-            this.ctx.closePath();
+        if (this._checkCollision(playerHead, this.food)) {
+            this._addScore(10);
+            this._growPlayer();
+            this._generateFood();
             
-            // Gefährlicher Schein
-            this.ctx.beginPath();
-            this.ctx.arc(enemy.x, enemy.y, enemy.size / 2 + 5, 0, Math.PI * 2);
-            this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-            this.ctx.closePath();
-        });
-    }
-    
-    /**
-     * Zeichnet die Hindernisse
-     */
-    _drawObstacles() {
-        this.obstacles.forEach(obstacle => {
-            this.ctx.beginPath();
-            this.ctx.rect(
-                obstacle.x - obstacle.size / 2,
-                obstacle.y - obstacle.size / 2,
-                obstacle.size,
-                obstacle.size
-            );
-            this.ctx.fillStyle = GAME_CONSTANTS.COLORS.OBSTACLE;
-            this.ctx.fill();
-            this.ctx.closePath();
-            
-            // Hindernis-Outline
-            this.ctx.beginPath();
-            this.ctx.rect(
-                obstacle.x - obstacle.size / 2,
-                obstacle.y - obstacle.size / 2,
-                obstacle.size,
-                obstacle.size
-            );
-            this.ctx.strokeStyle = '#FFFFFF';
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-            this.ctx.closePath();
-        });
-    }
-    
-    /**
-     * Zeichnet die Benutzeroberfläche
-     */
-    _drawUI() {
-        // Score
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.TEXT;
-        this.ctx.font = 'bold 24px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText(`Score: ${this.score}`, 20, 40);
-        
-        // Schwierigkeit
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText(`Schwierigkeit: ${this.difficulty.toUpperCase()}`, this.width - 20, 40);
-        
-        // Pausen-Anzeige
-        if (this.isPaused) {
-            this._drawPauseScreen();
+            this.logger.info(`Essen eingesammelt! Punktzahl: ${this.score}`);
         }
     }
     
     /**
-     * Zeichnet den Pausen-Bildschirm
+     * Lässt den Spieler wachsen
      */
-    _drawPauseScreen() {
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.UI_BACKGROUND;
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.TEXT;
-        this.ctx.font = 'bold 48px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('PAUSIERT', this.width / 2, this.height / 2);
-        
-        this.ctx.font = '24px Arial';
-        this.ctx.fillText('Drücke P zum Fortsetzen', this.width / 2, this.height / 2 + 50);
+    _growPlayer() {
+        const tail = { ...this.player.body[this.player.body.length - 1] };
+        this.player.body.push(tail);
     }
+    
+    /**
+     * Fügt Punkte zum Score hinzu
+     * @param {number} points - Punkte die hinzugefügt werden sollen
+     */
+    _addScore(points) {
+        this.score += points;
+        
+        // Bonus-Punkte basierend auf Schwierigkeit
+        const multiplier = {
+            [GAME_CONFIG.DIFFICULTY.EASY]: 1,
+            [GAME_CONFIG.DIFFICULTY.MEDIUM]: 1.5,
+            [GAME_CONFIG.DIFFICULTY.HARD]: 2
+        };
+        
+        this.score += Math.floor(points * (multiplier[this.difficulty] - 1));
+    }
+    
+    // ==================== GAME OVER ====================
     
     /**
      * Beendet das Spiel
@@ -554,137 +576,231 @@ class Game {
         this.isGameOver = true;
         this.isRunning = false;
         
-        if (this.spawnTimer) {
-            clearInterval(this.spawnTimer);
-        }
+        this.logger.info(`Spiel beendet! Endpunktzahl: ${this.score}`);
         
-        if (this.gameLoopId) {
-            cancelAnimationFrame(this.gameLoopId);
-        }
-        
+        // Zeichne Game Over Bildschirm
         this._drawGameOver();
     }
     
+    // ==================== RENDERING ====================
+    
     /**
-     * Zeichnet den Game-Over-Bildschirm
+     * Zeichnet den gesamten Spielzustand
+     */
+    _draw() {
+        // Hintergrund
+        this.ctx.fillStyle = COLORS.BACKGROUND;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Gitter
+        this._drawGrid();
+        
+        // Hindernisse
+        this._drawObstacles();
+        
+        // Essen
+        this._drawFood();
+        
+        // Gegner
+        this._drawEnemies();
+        
+        // Spieler
+        this._drawPlayer();
+        
+        // UI (Score, Pause-Status)
+        this._drawUI();
+    }
+    
+    /**
+     * Zeichnet das Gitter
+     */
+    _drawGrid() {
+        this.ctx.strokeStyle = COLORS.GRID;
+        this.ctx.lineWidth = 0.5;
+        
+        for (let x = 0; x <= this.width; x++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x * this.cellSize, 0);
+            this.ctx.lineTo(x * this.cellSize, this.canvas.height);
+            this.ctx.stroke();
+        }
+        
+        for (let y = 0; y <= this.height; y++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y * this.cellSize);
+            this.ctx.lineTo(this.canvas.width, y * this.cellSize);
+            this.ctx.stroke();
+        }
+    }
+    
+    /**
+     * Zeichnet den Spieler
+     */
+    _drawPlayer() {
+        if (!this.player || !this.player.body) return;
+        
+        this.ctx.fillStyle = COLORS.PLAYER;
+        
+        this.player.body.forEach((segment, index) => {
+            const x = segment.x * this.cellSize;
+            const y = segment.y * this.cellSize;
+            
+            // Kopf etwas größer
+            const size = index === 0 ? this.cellSize - 2 : this.cellSize - 4;
+            const offset = index === 0 ? 1 : 2;
+            
+            this.ctx.fillRect(x + offset, y + offset, size, size);
+        });
+    }
+    
+    /**
+     * Zeichnet die Gegner
+     */
+    _drawEnemies() {
+        this.ctx.fillStyle = COLORS.ENEMY;
+        
+        this.enemies.forEach(enemy => {
+            const x = enemy.x * this.cellSize + 2;
+            const y = enemy.y * this.cellSize + 2;
+            const size = this.cellSize - 4;
+            
+            // Gegner als Kreis zeichnen
+            this.ctx.beginPath();
+            this.ctx.arc(
+                x + size / 2,
+                y + size / 2,
+                size / 2,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.fill();
+        });
+    }
+    
+    /**
+     * Zeichnet die Hindernisse
+     */
+    _drawObstacles() {
+        this.ctx.fillStyle = COLORS.OBSTACLE;
+        
+        this.obstacles.forEach(obstacle => {
+            const x = obstacle.x * this.cellSize + 2;
+            const y = obstacle.y * this.cellSize + 2;
+            const size = this.cellSize - 4;
+            
+            this.ctx.fillRect(x, y, size, size);
+        });
+    }
+    
+    /**
+     * Zeichnet das Essen
+     */
+    _drawFood() {
+        if (!this.food) return;
+        
+        this.ctx.fillStyle = COLORS.FOOD;
+        
+        const x = this.food.x * this.cellSize + this.cellSize / 2;
+        const y = this.food.y * this.cellSize + this.cellSize / 2;
+        const radius = this.cellSize / 2 - 2;
+        
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+    
+    /**
+     * Zeichnet die UI-Elemente (Score, Pause-Status)
+     */
+    _drawUI() {
+        this.ctx.fillStyle = COLORS.TEXT;
+        this.ctx.font = '16px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`Score: ${this.score}`, 10, 25);
+        this.ctx.fillText(`Schwierigkeit: ${this.difficulty}`, 10, 50);
+        
+        // Pause-Indikator
+        if (this.isPaused) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            this.ctx.fillStyle = COLORS.TEXT;
+            this.ctx.font = '32px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('PAUSIERT', this.canvas.width / 2, this.canvas.height / 2);
+            this.ctx.font = '16px Arial';
+            this.ctx.fillText('Drücke LEERTASTE zum Fortsetzen', this.canvas.width / 2, this.canvas.height / 2 + 40);
+        }
+    }
+    
+    /**
+     * Zeichnet den Game Over Bildschirm
      */
     _drawGameOver() {
-        this._clearCanvas();
-        
-        // Dunkler Hintergrund
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.UI_BACKGROUND;
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        // Halbtransparenter Hintergrund
+        this.ctx.fillStyle = COLORS.UI_BG;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Game Over Text
-        this.ctx.fillStyle = '#FF0000';
-        this.ctx.font = 'bold 64px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('SPIEL VORBEI', this.width / 2, this.height / 2 - 50);
-        
-        // Score
-        this.ctx.fillStyle = GAME_CONSTANTS.COLORS.TEXT;
+        this.ctx.fillStyle = COLORS.ENEMY;
         this.ctx.font = 'bold 36px Arial';
-        this.ctx.fillText(`Endpunktzahl: ${this.score}`, this.width / 2, this.height / 2 + 20);
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('SPIEL VORBEI', this.canvas.width / 2, this.canvas.height / 2 - 30);
         
-        // Neustart-Hinweis
+        // Punktzahl
+        this.ctx.fillStyle = COLORS.TEXT;
         this.ctx.font = '24px Arial';
-        this.ctx.fillText('Drücke ENTER oder LEERTASTE für Neustart', this.width / 2, this.height / 2 + 80);
-    }
-    
-    /**
-     * Schaltet Pause ein/aus
-     */
-    togglePause() {
-        if (this.isGameOver) return;
+        this.ctx.fillText(`Endpunktzahl: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
         
-        this.isPaused = !this.isPaused;
+        // Anleitung zum Neustart
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText('Drücke R zum Neustarten', this.canvas.width / 2, this.canvas.height / 2 + 60);
+        this.ctx.fillText('Drücke LEERTASTE zum Pausieren', this.canvas.width / 2, this.canvas.height / 2 + 85);
         
-        if (this.isPaused) {
-            // Pausiere Spawn-Timer
-            if (this.spawnTimer) {
-                clearInterval(this.spawnTimer);
-                this.spawnTimer = null;
-            }
-        } {
-            // Setze Spawn-Timer fort
-            this._startSpawning();
-        }
-    }
-    
-    /**
-     * Setzt die Schwierigkeitsstufe
-     * @param {string} level - 'easy', 'medium' oder 'hard'
-     */
-    setDifficulty(level) {
-        const validLevels = Object.values(GAME_CONSTANTS.DIFFICULTY);
-        
-        if (!validLevels.includes(level)) {
-            console.error(`Ungültige Schwierigkeitsstufe: ${level}`);
-            return;
-        }
-        
-        this.difficulty = level;
-        
-        // Spieler-Geschwindigkeit aktualisieren
-        if (this.player) {
-            this.player.speed = GAME_CONSTANTS.SPEED[level];
-        }
-        
-        // Spawn-Intervall aktualisieren wenn das Spiel läuft
-        if (this.isRunning && !this.isPaused) {
-            this._startSpawning();
-        }
-    }
-    
-    /**
-     * Startet das Spiel neu
-     */
-    restart() {
-        // Altes Spiel stoppen
-        if (this.gameLoopId) {
-            cancelAnimationFrame(this.gameLoopId);
-        }
-        if (this.spawnTimer) {
-            clearInterval(this.spawnTimer);
-        }
-        
-        // Neues Spiel starten
-        this.start();
-    }
-    
-    /**
-     * Stoppt das Spiel
-     */
-    stop() {
-        this.isRunning = false;
-        this.isPaused = false;
-        this.isGameOver = false;
-        
-        if (this.gameLoopId) {
-            cancelAnimationFrame(this.gameLoopId);
-        }
-        if (this.spawnTimer) {
-            clearInterval(this.spawnTimer);
-        }
+        this.logger.info('Game Over Bildschirm angezeigt');
     }
 }
 
 // ==================== INITIALISIERUNG ====================
-// Globale Spielinstanz
-let game = null;
 
-// Initialisierung wenn DOM geladen ist
+// Globale Spielinstanz
+let game;
+
+/**
+ * Initialisiert das Spiel wenn das DOM geladen ist
+ */
 document.addEventListener('DOMContentLoaded', () => {
-    // Überprüfe ob Canvas existiert
-    const canvas = document.getElementById('gameCanvas');
-    if (canvas) {
-        game = new Game('gameCanvas');
-    } else {
-        console.error('Canvas-Element nicht gefunden!');
+    // Canvas-Element finden oder erstellen
+    let canvas = document.getElementById('gameCanvas');
+    
+    if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'gameCanvas';
+        document.body.appendChild(canvas);
     }
+    
+    // Spiel instanziieren
+    game = new Game('gameCanvas');
+    
+    // Start-Button Event Listener
+    const startButton = document.getElementById('startButton');
+    if (startButton) {
+        startButton.addEventListener('click', () => game.start());
+    }
+    
+    // Schwierigkeitsgrad-Buttons
+    const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+    difficultyButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const difficulty = e.target.dataset.difficulty;
+            game.setDifficulty(difficulty);
+        });
+    });
+    
+    console.log('Spiel initialisiert. Drücke R zum Neustarten.');
 });
 
-// Export für globale Nutzung
+// Export für Tests
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Game, GAME_CONSTANTS };
+    module.exports = { Game, GAME_CONFIG, COLORS };
 }
