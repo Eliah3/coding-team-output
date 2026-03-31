@@ -1,0 +1,99 @@
+/* 
+ * Stylesheet für Tic-Tac-Toe GUI
+ * Dieses CSS wird für zukünftige Erweiterungen (z.B. PyQt) verwendet
+ */
+
+/* Farbvariablen */
+:root {
+    --background: #2C3E50;
+    --frame: #34495E;
+    --button: #3498DB;
+    --button-hover: #2980B9;
+    --X-color: #E74C3C;
+    --O-color: #2ECC71;
+    --text: #ECF0F1;
+    --text-secondary: #BDC3C7;
+}
+
+/* Basis-Styles */
+body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: 'Helvetica', Arial, sans-serif;
+}
+
+/* Spielfeld */
+.board {
+    background-color: var(--frame);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.cell {
+    background-color: var(--frame);
+    border: 2px solid var(--button);
+    border-radius: 5px;
+    font-size: 36px;
+    font-weight: bold;
+    color: var(--text);
+    transition: background-color 0.3s;
+}
+
+.cell:hover {
+    background-color: var(--button-hover);
+}
+
+.cell.X {
+    color: var(--X-color);
+}
+
+.cell.O {
+    color: var(--O-color);
+}
+
+/* Buttons */
+.btn {
+    background-color: var(--button);
+    color: var(--text);
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn:hover {
+    background-color: var(--button-hover);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Status-Anzeige */
+.status {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 10px 0;
+}
+
+/* Titel */
+.title {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--text);
+    margin-bottom: 20px;
+}
+
+/* Dropdown/Select */
+.select {
+    background-color: var(--frame);
+    color: var(--text);
+    border: 1px solid var(--button);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+}
