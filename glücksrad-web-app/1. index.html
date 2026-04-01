@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tic-Tac-Toe</h1>
+        
+        <div class="game-info">
+            <div id="status">Spieler X ist dran</div>
+            <div class="score-board">
+                <span class="score">X: <span id="scoreX">0</span></span>
+                <span class="score">O: <span id="scoreO">0</span></span>
+            </div>
+        </div>
+
+        <div class="game-board" id="board">
+            <button class="cell" data-index="0"></button>
+            <button class="cell" data-index="1"></button>
+            <button class="cell" data-index="2"></button>
+            <button class="cell" data-index="3"></button>
+            <button class="cell" data-index="4"></button>
+            <button class="cell" data-index="5"></button>
+            <button class="cell" data-index="6"></button>
+            <button class="cell" data-index="7"></button>
+            <button class="cell" data-index="8"></button>
+        </div>
+
+        <div class="controls">
+            <button id="restartBtn" class="btn">Neustart</button>
+            <button id="aiModeBtn" class="btn">Gegen KI spielen</button>
+        </div>
+
+        <div class="mode-indicator">
+            <span id="modeText">Modus: Spieler vs Spieler</span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
