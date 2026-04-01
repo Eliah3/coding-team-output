@@ -1,0 +1,86 @@
+/* 
+Tic-Tac-Toe Stylesheet 
+(Hinweis: Tkinter verwendet kein CSS, diese Datei dient als Referenz
+für zukünftige Erweiterungen oder alternative UI-Frameworks)
+*/
+
+:root {
+    --background: #2C3E50;
+    --frame-bg: #34495E;
+    --button-bg: #ECF0F1;
+    --button-hover: #BDC3C7;
+    --x-color: #E74C3C;
+    --o-color: #3498DB;
+    --text: #ECF0F1;
+    --text-dark: #2C3E50;
+    --win-highlight: #27AE60;
+}
+
+/* Spielbrett */
+.board {
+    background-color: var(--frame-bg);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+/* Zellen */
+.cell {
+    width: 100px;
+    height: 100px;
+    background-color: var(--button-bg);
+    border: none;
+    font-size: 48px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.cell:hover {
+    background-color: var(--button-hover);
+}
+
+.cell.x {
+    color: var(--x-color);
+}
+
+.cell.o {
+    color: var(--o-color);
+}
+
+.cell.winner {
+    background-color: var(--win-highlight);
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: var(--button-bg);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn:hover {
+    background-color: var(--button-hover);
+}
+
+/* Labels */
+.title {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--text);
+}
+
+.status {
+    font-size: 16px;
+    color: var(--text);
+}
+
+.score {
+    font-size: 14px;
+    color: var(--text);
+}
