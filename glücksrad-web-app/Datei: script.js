@@ -1,1146 +1,919 @@
 /**
- * TicTacToe Desktop Spiel - Spiel-Logik
- * Implementiert Kollisionserkennung, Scoring, Neustart und alle fehlenden Methoden
+ * Snake-Spiel mit vollständiger Spiel-Logik
+ * Implementiert: Kollisionserkennung, Scoring, Neustart, Schwierigkeitsstufen, Pause
  */
 
 // ==================== KONSTANTEN ====================
-const GAME_CONSTANTS = {
-    // Spielfeldgröße
-    GRID_SIZE: 3,
-    CELL_SIZE: 100,
-    BOARD_PADDING: 20,
+const GAME_CONFIG = {
+    // Spielfeld-Größe
+    GRID_WIDTH: 20,
+    GRID_HEIGHT: 20,
+    CELL_SIZE: 20,
     
     // Schwierigkeitsstufen
     DIFFICULTY: {
-        EASY: 'easy',
-        MEDIUM: 'medium',
-        HARD: 'hard'
-    },
-    
-    // Spielzustände
-    STATE: {
-        MENU: 'menu',
-        PLAYING: 'playing',
-        PAUSED: 'paused',
-        GAME_OVER: 'game_over'
+        EASY: { speed: 150, name: 'Einfach' },
+        MEDIUM: { speed: 100, name: 'Mittel' },
+        HARD: { speed: 50, name: 'Schwer' }
     },
     
     // Farben
     COLORS: {
-        BACKGROUND: '#2c3e50',
-        BOARD: '#34495e',
-        CELL: '#ecf0f1',
-        PLAYER_X: '#e74c3c',
-        PLAYER_O: '#3498db',
-        WIN_LINE: '#f39c12',
-        TEXT: '#ecf0f1',
-        BUTTON: '#27ae60',
-        BUTTON_HOVER: '#2ecc71'
+        BACKGROUND: '#1a1a2e',
+        GRID: '#16213e',
+        SNAKE_HEAD: '#0f3460',
+        SNAKE_BODY: '#533483',
+        FOOD: '#e94560',
+        OBSTACLE: '#6b7280',
+        ENEMY: '#f59e0b',
+        TEXT: '#ffffff',
+        UI_BACKGROUND: 'rgba(0, 0, 0, 0.8)'
     },
     
-    // Symbole
-    SYMBOLS: {
-        PLAYER: 'X',
-        AI: 'O',
-        EMPTY: ''
+    // Spielobjekt-Typen
+    OBJECT_TYPES: {
+        EMPTY: 0,
+        SNAKE: 1,
+        FOOD: 2,
+        OBSTACLE: 3,
+        ENEMY: 4
     }
 };
 
 // ==================== SPIEL-LOGIK KLASSE ====================
-class TicTacToeGame {
-    constructor() {
-        // Spielbrett (3x3 Matrix)
-        this.board = [];
-        this.currentPlayer = GAME_CONSTANTS.SYMBOLS.PLAYER;
-        this.gameState = GAME_CONSTANTS.STATE.MENU;
-        this.winner = null;
-        this.winningLine = [];
-        this.score = { player: 0, ai: 0, draws: 0 };
-        this.difficulty = GAME_CONSTANTS.DIFFICULTY.MEDIUM;
-        this.moveCount = 0;
+class GameLogic {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
         
-        // Logging-System
+        // Spielfeld
+        this.gridWidth = GAME_CONFIG.GRID_WIDTH;
+        this.gridHeight = GAME_CONFIG.GRID_HEIGHT;
+        this.cellSize = GAME_CONFIG.CELL_SIZE;
+        
+        // Canvas-Größe setzen
+        this.canvas.width = this.gridWidth * this.cellSize;
+        this.canvas.height = this.gridHeight * this.cellSize;
+        
+        // Spielstatus
+        this.isRunning = false;
+        this.isPaused = false;
+        this.isGameOver = false;
+        this.score = 0;
+        this.difficulty = GAME_CONFIG.DIFFICULTY.MEDIUM;
+        this.gameSpeed = this.difficulty.speed;
+        
+        // Spielobjekte
+        this.snake = [];
+        this.food = null;
+        this.obstacles = [];
+        this.enemies = [];
+        
+        // Spielschleife
+        this.gameLoop = null;
+        
+        // Logging
         this.logger = {
-            enabled: true,
-            log: (message, level = 'INFO') => {
-                if (this.logger.enabled) {
-                    const timestamp = new Date().toISOString();
-                    console.log(`[${timestamp}] [${level}] ${message}`);
-                }
-            }
+            info: (msg) => console.log(`[INFO] ${new Date().toISOString()} - ${msg}`),
+            warn: (msg) => console.warn(`[WARN] ${new Date().toISOString()} - ${msg}`),
+            error: (msg) => console.error(`[ERROR] ${new Date().toISOString()} - ${msg}`)
         };
         
-        // Initialisiere das Spielbrett
-        this.resetBoard();
+        // Event-Listener für Tastatur
+        this._setupKeyboardListeners();
         
-        this.logger.log('Spiel-Logik initialisiert', 'INFO');
+        // Initialisierung
+        this._init();
     }
-
-    // ==================== GRUNDMETHODEN ====================
     
     /**
-     * Setzt das Spielbrett auf den Ausgangszustand zurück
+     * Initialisiert das Spiel
      */
-    resetBoard() {
-        this.board = Array(GAME_CONSTANTS.GRID_SIZE).fill(null)
-            .map(() => Array(GAME_CONSTANTS.GRID_SIZE).fill(GAME_CONSTANTS.SYMBOLS.EMPTY));
-        this.currentPlayer = GAME_CONSTANTS.SYMBOLS.PLAYER;
-        this.winner = null;
-        this.winningLine = [];
-        this.moveCount = 0;
-        this.logger.log('Spielbrett zurückgesetzt', 'DEBUG');
+    _init() {
+        this.logger.info('Spiel-Initialisierung gestartet');
+        this._resetGame();
+        this._draw();
+        this.logger.info('Spiel-Initialisierung abgeschlossen');
     }
-
-    /**
-     * Startet ein neues Spiel
-     */
-    startNewGame() {
-        this.resetBoard();
-        this.gameState = GAME_CONSTANTS.STATE.PLAYING;
-        this.logger.log(`Neues Spiel gestartet - Schwierigkeit: ${this.difficulty}`, 'INFO');
-        return true;
-    }
-
-    /**
-     * Überprüft, ob ein Zug gültig ist
-     * @param {number} row - Zeile (0-2)
-     * @param {number} col - Spalte (0-2)
-     * @returns {boolean} - True wenn Zug gültig
-     */
-    isValidMove(row, col) {
-        // Prüfe ob Indizes im gültigen Bereich liegen
-        if (row < 0 || row >= GAME_CONSTANTS.GRID_SIZE || 
-            col < 0 || col >= GAME_CONSTANTS.GRID_SIZE) {
-            this.logger.log(`Ungültiger Zug: Position außerhalb des Spielfelds (${row}, ${col})`, 'WARN');
-            return false;
-        }
-        
-        // Prüfe ob Zelle leer ist
-        if (this.board[row][col] !== GAME_CONSTANTS.SYMBOLS.EMPTY) {
-            this.logger.log(`Ungültiger Zug: Zelle bereits belegt (${row}, ${col})`, 'WARN');
-            return false;
-        }
-        
-        // Prüfe ob Spiel aktiv ist
-        if (this.gameState !== GAME_CONSTANTS.STATE.PLAYING) {
-            this.logger.log(`Ungültiger Zug: Spiel ist nicht aktiv (Status: ${this.gameState})`, 'WARN');
-            return false;
-        }
-        
-        return true;
-    }
-
-    /**
-     * Führt einen Zug aus
-     * @param {number} row - Zeile (0-2)
-     * @param {number} col - Spalte (0-2)
-     * @returns {boolean} - True wenn Zug erfolgreich
-     */
-    makeMove(row, col) {
-        if (!this.isValidMove(row, col)) {
-            return false;
-        }
-        
-        // Setze Symbol auf dem Brett
-        this.board[row][col] = this.currentPlayer;
-        this.moveCount++;
-        
-        this.logger.log(`Spieler ${this.currentPlayer} setzt auf (${row}, ${col})`, 'INFO');
-        
-        // Prüfe auf Sieg oder Unentschieden
-        if (this.checkWin(this.currentPlayer)) {
-            this.handleWin();
-            return true;
-        }
-        
-        if (this.checkDraw()) {
-            this.handleDraw();
-            return true;
-        }
-        
-        // Wechsle Spieler
-        this.currentPlayer = this.currentPlayer === GAME_CONSTANTS.SYMBOLS.PLAYER 
-            ? GAME_CONSTANTS.SYMBOLS.AI 
-            : GAME_CONSTANTS.SYMBOLS.PLAYER;
-        
-        return true;
-    }
-
-    // ==================== KOLLISIONSERKENNUNG ====================
     
     /**
-     * Prüft auf Kollision zwischen zwei Zellen
-     * @param {number} row1 - Zeile der ersten Zelle
-     * @param {number} col1 - Spalte der ersten Zelle
-     * @param {number} row2 - Zeile der zweiten Zelle
-     * @param {number} col2 - Spalte der zweiten Zelle
-     * @returns {boolean} - True wenn Kollision
+     * Setzt das Spiel zurück
      */
-    checkCollision(row1, col1, row2, col2) {
-        return row1 === row2 && col1 === col2;
-    }
-
-    /**
-     * Prüft ob eine Position mit einem bestimmten Symbol kollidiert
-     * @param {number} row - Zu prüfende Zeile
-     * @param {number} col - Zu prüfende Spalte
-     * @param {string} symbol - Das zu prüfende Symbol
-     * @returns {boolean} - True bei Kollision
-     */
-    checkSymbolCollision(row, col, symbol) {
-        if (row < 0 || row >= GAME_CONSTANTS.GRID_SIZE || 
-            col < 0 || col >= GAME_CONSTANTS.GRID_SIZE) {
-            return false;
-        }
-        return this.board[row][col] === symbol;
-    }
-
-    /**
-     * Prüft alle Kollisionen für eine bestimmte Position
-     * @param {number} row - Zeile
-     * @param {number} col - Spalte
-     * @returns {object} - Kollisionsinformationen
-     */
-    checkAllCollisions(row, col) {
-        const collisions = {
-            withPlayer: this.checkSymbolCollision(row, col, GAME_CONSTANTS.SYMBOLS.PLAYER),
-            withAI: this.checkSymbolCollision(row, col, GAME_CONSTANTS.SYMBOLS.AI),
-            isEmpty: this.board[row][col] === GAME_CONSTANTS.SYMBOLS.EMPTY,
-            isValid: row >= 0 && row < GAME_CONSTANTS.GRID_SIZE && 
-                     col >= 0 && col < GAME_CONSTANTS.GRID_SIZE
-        };
+    _resetGame() {
+        this.snake = [
+            { x: Math.floor(this.gridWidth / 2), y: Math.floor(this.gridHeight / 2) },
+            { x: Math.floor(this.gridWidth / 2) - 1, y: Math.floor(this.gridHeight / 2) },
+            { x: Math.floor(this.gridWidth / 2) - 2, y: Math.floor(this.gridHeight / 2) }
+        ];
+        this.direction = { x: 1, y: 0 };
+        this.nextDirection = { x: 1, y: 0 };
+        this.score = 0;
+        this.isGameOver = false;
+        this.isPaused = false;
         
-        collisions.any = collisions.withPlayer || collisions.withAI || !collisions.isEmpty;
+        // Generiere Objekte
+        this._generateFood();
+        this._generateObstacles();
+        this._generateEnemies();
         
-        return collisions;
+        this.logger.info('Spiel zurückgesetzt');
     }
-
-    // ==================== SIEG-/UNENTSCHIEDEN-PRÜFUNG ====================
     
     /**
-     * Prüft ob der aktuelle Spieler gewonnen hat
-     * @param {string} player - Spieler-Symbol
-     * @returns {boolean} - True wenn gewonnen
+     * Generiert Nahrung an einer zufälligen Position
      */
-    checkWin(player) {
-        const size = GAME_CONSTANTS.GRID_SIZE;
+    _generateFood() {
+        let validPosition = false;
+        let newFood;
         
-        // Prüfe Zeilen
-        for (let row = 0; row < size; row++) {
-            if (this.board[row].every(cell => cell === player)) {
-                this.winningLine = [[row, 0], [row, 1], [row, 2]];
-                return true;
+        while (!validPosition) {
+            newFood = {
+                x: Math.floor(Math.random() * this.gridWidth),
+                y: Math.floor(Math.random() * this.gridHeight)
+            };
+            
+            validPosition = !this._isPositionOccupied(newFood.x, newFood.y);
+        }
+        
+        this.food = newFood;
+        this.logger.info(`Nahrung generiert bei (${newFood.x}, ${newFood.y})`);
+    }
+    
+    /**
+     * Generiert Hindernisse basierend auf der Schwierigkeit
+     */
+    _generateObstacles() {
+        this.obstacles = [];
+        const obstacleCount = this._getObstacleCount();
+        
+        for (let i = 0; i < obstacleCount; i++) {
+            let validPosition = false;
+            let obstacle;
+            
+            while (!validPosition) {
+                obstacle = {
+                    x: Math.floor(Math.random() * this.gridWidth),
+                    y: Math.floor(Math.random() * this.gridHeight)
+                };
+                
+                // Nicht auf der Schlange oder dem Essen
+                validPosition = !this._isPositionOccupied(obstacle.x, obstacle.y) &&
+                               !this._isNearStart(obstacle);
             }
+            
+            this.obstacles.push(obstacle);
         }
         
-        // Prüfe Spalten
-        for (let col = 0; col < size; col++) {
-            if (this.board.every(row => row[col] === player)) {
-                this.winningLine = [[0, col], [1, col], [2, col]];
-                return true;
+        this.logger.info(`${obstacleCount} Hindernisse generiert`);
+    }
+    
+    /**
+     * Generiert Gegner basierend auf der Schwierigkeit
+     */
+    _generateEnemies() {
+        this.enemies = [];
+        const enemyCount = this._getEnemyCount();
+        
+        for (let i = 0; i < enemyCount; i++) {
+            let validPosition = false;
+            let enemy;
+            
+            while (!validPosition) {
+                enemy = {
+                    x: Math.floor(Math.random() * this.gridWidth),
+                    y: Math.floor(Math.random() * this.gridHeight),
+                    direction: { x: Math.random() > 0.5 ? 1 : -1, y: 0 }
+                };
+                
+                validPosition = !this._isPositionOccupied(enemy.x, enemy.y) &&
+                               !this._isNearStart(enemy);
             }
+            
+            this.enemies.push(enemy);
         }
         
-        // Prüfe Diagonale (links oben nach rechts unten)
-        if (this.board.every((row, index) => row[index] === player)) {
-            this.winningLine = [[0, 0], [1, 1], [2, 2]];
-            return true;
+        this.logger.info(`${enemyCount} Gegner generiert`);
+    }
+    
+    /**
+     * Gibt die Anzahl der Hindernisse basierend auf der Schwierigkeit zurück
+     */
+    _getObstacleCount() {
+        switch (this.difficulty) {
+            case GAME_CONFIG.DIFFICULTY.EASY:
+                return 3;
+            case GAME_CONFIG.DIFFICULTY.MEDIUM:
+                return 6;
+            case GAME_CONFIG.DIFFICULTY.HARD:
+                return 10;
+            default:
+                return 6;
+        }
+    }
+    
+    /**
+     * Gibt die Anzahl der Gegner basierend auf der Schwierigkeit zurück
+     */
+    _getEnemyCount() {
+        switch (this.difficulty) {
+            case GAME_CONFIG.DIFFICULTY.EASY:
+                return 1;
+            case GAME_CONFIG.DIFFICULTY.MEDIUM:
+                return 2;
+            case GAME_CONFIG.DIFFICULTY.HARD:
+                return 4;
+            default:
+                return 2;
+        }
+    }
+    
+    /**
+     * Prüft, ob eine Position besetzt ist
+     */
+    _isPositionOccupied(x, y) {
+        // Prüfe Schlangen-Körper
+        for (const segment of this.snake) {
+            if (segment.x === x && segment.y === y) return true;
         }
         
-        // Prüfe Diagonale (rechts oben nach links unten)
-        if (this.board.every((row, index) => row[size - 1 - index] === player)) {
-            this.winningLine = [[0, 2], [1, 1], [2, 0]];
-            return true;
+        // Prüfe Nahrung
+        if (this.food && this.food.x === x && this.food.y === y) return true;
+        
+        // Prüfe Hindernisse
+        for (const obs of this.obstacles) {
+            if (obs.x === x && obs.y === y) return true;
+        }
+        
+        // Prüfe Gegner
+        for (const enemy of this.enemies) {
+            if (enemy.x === x && enemy.y === y) return true;
         }
         
         return false;
     }
-
-    /**
-     * Prüft auf Unentschieden
-     * @returns {boolean} - True wenn unentschieden
-     */
-    checkDraw() {
-        return this.moveCount >= GAME_CONSTANTS.GRID_SIZE * GAME_CONSTANTS.GRID_SIZE && 
-               !this.winner;
-    }
-
-    /**
-     * Behandelt einen Sieg
-     */
-    handleWin() {
-        this.winner = this.currentPlayer;
-        this.gameState = GAME_CONSTANTS.STATE.GAME_OVER;
-        
-        if (this.winner === GAME_CONSTANTS.SYMBOLS.PLAYER) {
-            this.score.player++;
-            this.logger.log('Spieler hat gewonnen!', 'INFO');
-        } else {
-            this.score.ai++;
-            this.logger.log('KI hat gewonnen!', 'INFO');
-        }
-        
-        this.logger.log(`Aktueller Punktestand - Spieler: ${this.score.player}, KI: ${this.score.ai}, Unentschieden: ${this.score.draws}`, 'INFO');
-    }
-
-    /**
-     * Behandelt ein Unentschieden
-     */
-    handleDraw() {
-        this.gameState = GAME_CONSTANTS.STATE.GAME_OVER;
-        this.score.draws++;
-        this.logger.log('Unentschieden!', 'INFO');
-    }
-
-    // ==================== PAUSE-FUNKTION ====================
     
     /**
-     * Schaltet den Pausenzustand um
-     * @returns {boolean} - Neuer Pausenzustand
+     * Prüft, ob eine Position nahe am Start ist
      */
-    togglePause() {
-        if (this.gameState === GAME_CONSTANTS.STATE.PLAYING) {
-            this.gameState = GAME_CONSTANTS.STATE.PAUSED;
-            this.logger.log('Spiel pausiert', 'INFO');
-        } else if (this.gameState === GAME_CONSTANTS.STATE.PAUSED) {
-            this.gameState = GAME_CONSTANTS.STATE.PLAYING;
-            this.logger.log('Spiel fortgesetzt', 'INFO');
-        }
-        
-        return this.gameState === GAME_CONSTANTS.STATE.PAUSED;
+    _isNearStart(pos) {
+        const startX = Math.floor(this.gridWidth / 2);
+        const startY = Math.floor(this.gridHeight / 2);
+        return Math.abs(pos.x - startX) < 3 && Math.abs(pos.y - startY) < 3;
     }
-
-    /**
-     * Prüft ob das Spiel pausiert ist
-     * @returns {boolean}
-     */
-    isPaused() {
-        return this.gameState === GAME_CONSTANTS.STATE.PAUSED;
-    }
-
-    // ==================== SCHWIERIGKEIT ====================
     
     /**
-     * Setzt die Schwierigkeitsstufe
-     * @param {string} difficulty - Schwierigkeitsstufe ('easy', 'medium', 'hard')
-     * @returns {boolean} - True wenn erfolgreich
+     * Kollisionserkennung
      */
-    setDifficulty(difficulty) {
-        const validDifficulties = Object.values(GAME_CONSTANTS.DIFFICULTY);
-        
-        if (!validDifficulties.includes(difficulty)) {
-            this.logger.log(`Ungültige Schwierigkeitsstufe: ${difficulty}`, 'WARN');
-            return false;
+    _checkCollision(x, y) {
+        // Wand-Kollision
+        if (x < 0 || x >= this.gridWidth || y < 0 || y >= this.gridHeight) {
+            this.logger.warn(`Wand-Kollision bei (${x}, ${y})`);
+            return true;
         }
         
-        this.difficulty = difficulty;
-        this.logger.log(`Schwierigkeitsstufe gesetzt auf: ${difficulty}`, 'INFO');
-        return true;
-    }
-
-    /**
-     * Gibt die aktuelle Schwierigkeitsstufe zurück
-     * @returns {string}
-     */
-    getDifficulty() {
-        return this.difficulty;
-    }
-
-    /**
-     * Gibt Parameter für die KI basierend auf der Schwierigkeit zurück
-     * @returns {object}
-     */
-    getDifficultyParams() {
-        const params = {
-            [GAME_CONSTANTS.DIFFICULTY.EASY]: {
-                randomMoveChance: 0.8,  // 80% Zufallszüge
-                winPriority: true,
-                blockPriority: true
-            },
-            [GAME_CONSTANTS.DIFFICULTY.MEDIUM]: {
-                randomMoveChance: 0.4,  // 40% Zufallszüge
-                winPriority: true,
-                blockPriority: true
-            },
-            [GAME_CONSTANTS.DIFFICULTY.HARD]: {
-                randomMoveChance: 0.1,  // 10% Zufallszüge
-                winPriority: true,
-                blockPriority: true,
-                optimalPlay: true  // Minimax-Algorithmus
+        // Selbst-Kollision
+        for (let i = 0; i < this.snake.length; i++) {
+            if (this.snake[i].x === x && this.snake[i].y === y) {
+                this.logger.warn(`Selbst-Kollision bei (${x}, ${y})`);
+                return true;
             }
-        };
-        
-        return params[this.difficulty];
-    }
-
-    // ==================== SCORING ====================
-    
-    /**
-     * Gibt den aktuellen Punktestand zurück
-     * @returns {object}
-     */
-    getScore() {
-        return { ...this.score };
-    }
-
-    /**
-     * Aktualisiert den Punktestand
-     * @param {string} winner - Gewinner-Symbol
-     */
-    updateScore(winner) {
-        if (winner === GAME_CONSTANTS.SYMBOLS.PLAYER) {
-            this.score.player++;
-        } else if (winner === GAME_CONSTANTS.SYMBOLS.AI) {
-            this.score.ai++;
-        } else {
-            this.score.draws++;
         }
         
-        this.logger.log(`Punktestand aktualisiert: Spieler ${this.score.player} - KI ${this.score.ai}`, 'DEBUG');
-    }
-
-    /**
-     * Setzt den Punktestand zurück
-     */
-    resetScore() {
-        this.score = { player: 0, ai: 0, draws: 0 };
-        this.logger.log('Punktestand zurückgesetzt', 'INFO');
-    }
-
-    // ==================== SPIELZUSTAND ====================
-    
-    /**
-     * Gibt den aktuellen Spielzustand zurück
-     * @returns {string}
-     */
-    getGameState() {
-        return this.gameState;
-    }
-
-    /**
-     * Setzt den Spielzustand
-     * @param {string} state - Neuer Zustand
-     */
-    setGameState(state) {
-        const validStates = Object.values(GAME_CONSTANTS.STATE);
-        
-        if (!validStates.includes(state)) {
-            this.logger.log(`Ungültiger Spielzustand: ${state}`, 'WARN');
-            return false;
+        // Hindernis-Kollision
+        for (const obs of this.obstacles) {
+            if (obs.x === x && obs.y === y) {
+                this.logger.warn(`Hindernis-Kollision bei (${x}, ${y})`);
+                return true;
+            }
         }
         
-        this.gameState = state;
-        this.logger.log(`Spielzustand geändert zu: ${state}`, 'DEBUG');
-        return true;
-    }
-
-    /**
-     * Prüft ob das Spiel vorbei ist
-     * @returns {boolean}
-     */
-    isGameOver() {
-        return this.gameState === GAME_CONSTANTS.STATE.GAME_OVER;
-    }
-
-    /**
-     * Prüft ob das Spiel läuft
-     * @returns {boolean}
-     */
-    isPlaying() {
-        return this.gameState === GAME_CONSTANTS.STATE.PLAYING;
-    }
-
-    // ==================== BRETT-INFORMATIONEN ====================
-    
-    /**
-     * Gibt das aktuelle Brett zurück
-     * @returns {Array}
-     */
-    getBoard() {
-        return this.board.map(row => [...row]);
-    }
-
-    /**
-     * Gibt die Gewinnlinie zurück
-     * @returns {Array}
-     */
-    getWinningLine() {
-        return [...this.winningLine];
-    }
-
-    /**
-     * Gibt den aktuellen Spieler zurück
-     * @returns {string}
-     */
-    getCurrentPlayer() {
-        return this.currentPlayer;
-    }
-
-    /**
-     * Gibt den Gewinner zurück
-     * @returns {string|null}
-     */
-    getWinner() {
-        return this.winner;
-    }
-
-    /**
-     * Gibt die Anzahl der Züge zurück
-     * @returns {number}
-     */
-    getMoveCount() {
-        return this.moveCount;
-    }
-
-    // ==================== STATISTIKEN ====================
-    
-    /**
-     * Gibt Spielstatistiken zurück
-     * @returns {object}
-     */
-    getStatistics() {
-        const totalGames = this.score.player + this.score.ai + this.score.draws;
-        const playerWinRate = totalGames > 0 ? (this.score.player / totalGames * 100).toFixed(1) : 0;
-        const aiWinRate = totalGames > 0 ? (this.score.ai / totalGames * 100).toFixed(1) : 0;
-        
-        return {
-            totalGames,
-            playerWins: this.score.player,
-            aiWins: this.score.ai,
-            draws: this.score.draws,
-            playerWinRate: `${playerWinRate}%`,
-            aiWinRate: `${aiWinRate}%`,
-            currentDifficulty: this.difficulty,
-            movesThisGame: this.moveCount
-        };
-    }
-
-    // ==================== VALIDIERUNG ====================
-    
-    /**
-     * Validiert die Brettstruktur
-     * @returns {object} - Validierungsergebnis
-     */
-    validateBoard() {
-        const errors = [];
-        
-        // Prüfe ob Brett existiert
-        if (!this.board || !Array.isArray(this.board)) {
-            errors.push('Brett existiert nicht oder ist kein Array');
-            return { valid: false, errors };
+        // Gegner-Kollision
+        for (const enemy of this.enemies) {
+            if (enemy.x === x && enemy.y === y) {
+                this.logger.warn(`Gegner-Kollision bei (${x}, ${y})`);
+                return true;
+            }
         }
         
-        // Prüfe Größe
-        if (this.board.length !== GAME_CONSTANTS.GRID_SIZE) {
-            errors.push(`Ungültige Brettgröße: ${this.board.length} (erwartet: ${GAME_CONSTANTS.GRID_SIZE})`);
-        }
-        
-        // Prüfe jede Zeile
-        this.board.forEach((row, rowIndex) => {
-            if (!Array.isArray(row)) {
-                errors.push(`Zeile ${rowIndex} ist kein Array`);
-                return;
+        return false;
+    }
+    
+    /**
+     * Aktualisiert die Position der Gegner
+     */
+    _updateEnemies() {
+        for (const enemy of this.enemies) {
+            // Zufällige Richtungsänderung
+            if (Math.random() < 0.1) {
+                const directions = [
+                    { x: 1, y: 0 },
+                    { x: -1, y: 0 },
+                    { x: 0, y: 1 },
+                    { x: 0, y: -1 }
+                ];
+                enemy.direction = directions[Math.floor(Math.random() * directions.length)];
             }
             
-            if (row.length !== GAME_CONSTANTS.GRID_SIZE) {
-                errors.push(`Ungültige Zeilengröße in Zeile ${rowIndex}: ${row.length}`);
+            // Neue Position berechnen
+            let newX = enemy.x + enemy.direction.x;
+            let newY = enemy.y + enemy.direction.y;
+            
+            // Bei Wand: Richtung umkehren
+            if (newX < 0 || newX >= this.gridWidth) {
+                enemy.direction.x *= -1;
+                newX = enemy.x + enemy.direction.x;
+            }
+            if (newY < 0 || newY >= this.gridHeight) {
+                enemy.direction.y *= -1;
+                newY = enemy.y + enemy.direction.y;
             }
             
-            // Prüfe Zelleninhalte
-            row.forEach((cell, colIndex) => {
-                const validSymbols = [GAME_CONSTANTS.SYMBOLS.EMPTY, 
-                                      GAME_CONSTANTS.SYMBOLS.PLAYER, 
-                                      GAME_CONSTANTS.SYMBOLS.AI];
-                if (!validSymbols.includes(cell)) {
-                    errors.push(`Ungültiger Zelleninhalt bei (${rowIndex}, ${colIndex}): ${cell}`);
-                }
-            });
-        });
-        
-        return {
-            valid: errors.length === 0,
-            errors
-        };
-    }
-
-    // ==================== DEBUG-METHODEN ====================
-    
-    /**
-     * Gibt eine textuelle Darstellung des Brettes zurück
-     * @returns {string}
-     */
-    getBoardAsString() {
-        return this.board.map(row => 
-            row.map(cell => cell || '.').join(' | ')
-        ).join('\n---------\n');
-    }
-
-    /**
-     * Debug-Ausgabe des aktuellen Spielzustands
-     */
-    debug() {
-        console.group('🔍 TicTacToe Debug Info');
-        console.log('Brett:', this.getBoardAsString());
-        console.log('Aktueller Spieler:', this.currentPlayer);
-        console.log('Spielzustand:', this.gameState);
-        console.log('Gewinner:', this.winner);
-        console.log('Gewinnlinie:', this.winningLine);
-        console.log('Punktestand:', this.score);
-        console.log('Schwierigkeit:', this.difficulty);
-        console.log('Züge:', this.moveCount);
-        console.groupEnd();
-    }
-}
-
-// ==================== UI-RENDERER KLASSE ====================
-class GameRenderer {
-    constructor(game) {
-        this.game = game;
-        this.canvas = null;
-        this.ctx = null;
-        
-        // Farben aus Konstanten
-        this.colors = GAME_CONSTANTS.COLORS;
-    }
-
-    /**
-     * Initialisiert den Canvas
-     * @param {HTMLCanvasElement} canvasElement 
-     */
-    init(canvasElement) {
-        this.canvas = canvasElement;
-        this.ctx = this.canvas.getContext('2d');
-        this.logger.log('Renderer initialisiert', 'INFO');
-    }
-
-    /**
-     * Zeichnet das gesamte Spiel
-     */
-    draw() {
-        // Canvas löschen
-        this.ctx.fillStyle = this.colors.BACKGROUND;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        switch (this.game.getGameState()) {
-            case GAME_CONSTANTS.STATE.MENU:
-                this._drawMenu();
-                break;
-            case GAME_CONSTANTS.STATE.PLAYING:
-            case GAME_CONSTANTS.STATE.PAUSED:
-                this._drawBoard();
-                this._drawSymbols();
-                this._drawUI();
-                if (this.game.isPaused()) {
-                    this._drawPausedOverlay();
-                }
-                break;
-            case GAME_CONSTANTS.STATE.GAME_OVER:
-                this._drawBoard();
-                this._drawSymbols();
-                this._drawWinningLine();
-                this._drawGameOver();
-                break;
-        }
-    }
-
-    /**
-     * Zeichnet das Menü
-     */
-    _drawMenu() {
-        this.ctx.fillStyle = this.colors.TEXT;
-        this.ctx.font = '48px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('TicTacToe', this.canvas.width / 2, this.canvas.height / 2 - 50);
-        
-        this.ctx.font = '24px Arial';
-        this.ctx.fillText('Drücke ENTER um zu starten', this.canvas.width / 2, this.canvas.height / 2 + 20);
-    }
-
-    /**
-     * Zeichnet das Spielfeld
-     */
-    _drawBoard() {
-        const cellSize = GAME_CONSTANTS.CELL_SIZE;
-        const padding = GAME_CONSTANTS.BOARD_PADDING;
-        
-        // Hintergrund des Brettes
-        this.ctx.fillStyle = this.colors.BOARD;
-        this.ctx.fillRect(padding, padding, 
-            cellSize * 3 + 10, cellSize * 3 + 10);
-        
-        // Gitterlinien
-        this.ctx.strokeStyle = this.colors.CELL;
-        this.ctx.lineWidth = 3;
-        
-        // Vertikale Linien
-        for (let i = 1; i <= 2; i++) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(padding + i * cellSize, padding);
-            this.ctx.lineTo(padding + i * cellSize, padding + cellSize * 3);
-            this.ctx.stroke();
-        }
-        
-        // Horizontale Linien
-        for (let i = 1; i <= 2; i++) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(padding, padding + i * cellSize);
-            this.ctx.lineTo(padding + cellSize * 3, padding + i * cellSize);
-            this.ctx.stroke();
-        }
-    }
-
-    /**
-     * Zeichnet die Symbole (X und O)
-     */
-    _drawSymbols() {
-        const cellSize = GAME_CONSTANTS.CELL_SIZE;
-        const padding = GAME_CONSTANTS.BOARD_PADDING;
-        
-        for (let row = 0; row < GAME_CONSTANTS.GRID_SIZE; row++) {
-            for (let col = 0; col < GAME_CONSTANTS.GRID_SIZE; col++) {
-                const symbol = this.game.board[row][col];
-                if (symbol === GAME_CONSTANTS.SYMBOLS.EMPTY) continue;
-                
-                const x = padding + col * cellSize + cellSize / 2;
-                const y = padding + row * cellSize + cellSize / 2;
-                
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.font = 'bold 60px Arial';
-                
-                if (symbol === GAME_CONSTANTS.SYMBOLS.PLAYER) {
-                    this.ctx.fillStyle = this.colors.PLAYER_X;
-                } else {
-                    this.ctx.fillStyle = this.colors.PLAYER_O;
-                }
-                
-                this.ctx.fillText(symbol, x, y);
+            // Prüfen, ob die neue Position nicht mit der Schlange kollidiert
+            if (!this._checkCollision(newX, newY)) {
+                enemy.x = newX;
+                enemy.y = newY;
             }
         }
     }
-
-    /**
-     * Zeichnet die Gewinnlinie
-     */
-    _drawWinningLine() {
-        const winningLine = this.game.getWinningLine();
-        if (winningLine.length !== 3) return;
-        
-        const cellSize = GAME_CONSTANTS.CELL_SIZE;
-        const padding = GAME_CONSTANTS.BOARD_PADDING;
-        
-        this.ctx.strokeStyle = this.colors.WIN_LINE;
-        this.ctx.lineWidth = 5;
-        
-        const startX = padding + winningLine[0][1] * cellSize + cellSize / 2;
-        const startY = padding + winningLine[0][0] * cellSize + cellSize / 2;
-        const endX = padding + winningLine[2][1] * cellSize + cellSize / 2;
-        const endY = padding + winningLine[2][0] * cellSize + cellSize / 2;
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(startX, startY);
-        this.ctx.lineTo(endX, endY);
-        this.ctx.stroke();
-    }
-
-    /**
-     * Zeichnet die UI-Elemente (Punktestand, Spieler)
-     */
-    _drawUI() {
-        const score = this.game.getScore();
-        
-        this.ctx.fillStyle = this.colors.TEXT;
-        this.ctx.font = '20px Arial';
-        this.ctx.textAlign = 'left';
-        
-        // Punktestand
-        this.ctx.fillText(`Spieler X: ${score.player}`, 20, 30);
-        this.ctx.fillText(`KI O: ${score.ai}`, 20, 55);
-        this.ctx.fillText(`Unentschieden: ${score.draws}`, 20, 80);
-        
-        // Aktueller Spieler
-        this.ctx.textAlign = 'right';
-        const currentPlayer = this.game.getCurrentPlayer();
-        this.ctx.fillText(`Aktueller Spieler: ${currentPlayer}`, this.canvas.width - 20, 30);
-        
-        // Schwierigkeit
-        this.ctx.fillText(`Schwierigkeit: ${this.game.getDifficulty()}`, this.canvas.width - 20, 55);
-    }
-
-    /**
-     * Zeichnet die Pause-Overlay
-     */
-    _drawPausedOverlay() {
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.ctx.fillStyle = this.colors.TEXT;
-        this.ctx.font = '48px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('PAUSIERT', this.canvas.width / 2, this.canvas.height / 2);
-        
-        this.ctx.font = '24px Arial';
-        this.ctx.fillText('Drücke P zum Fortsetzen', this.canvas.width / 2, this.canvas.height / 2 + 50);
-    }
-
-    /**
-     * Zeichnet die Spielende-Anzeige
-     * BEHEBUNG: Syntaxfehler behoben (entfernt 'te' am Ende)
-     */
-    _drawGameOver() {
-        // Halbtransparenter Hintergrund
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.ctx.fillStyle = this.colors.TEXT;
-        this.ctx.textAlign = 'center';
-        
-        const winner = this.game.getWinner();
-        
-        if (winner) {
-            this.ctx.font = 'bold 48px Arial';
-            const winnerText = winner === GAME_CONSTANTS.SYMBOLS.PLAYER ? 'DU HAST GEWONNEN!' : 'KI HAT GEWONNEN!';
-            this.ctx.fillStyle = winner === GAME_CONSTANTS.SYMBOLS.PLAYER ? 
-                this.colors.PLAYER_X : this.colors.PLAYER_O;
-            this.ctx.fillText(winnerText, this.canvas.width / 2, this.canvas.height / 2 - 30);
-        } else {
-            this.ctx.font = 'bold 48px Arial';
-            this.ctx.fillStyle = this.colors.WIN_LINE;
-            this.ctx.fillText('UNENTSCHIEDEN!', this.canvas.width / 2, this.canvas.height / 2 - 30);
-        }
-        
-        this.ctx.font = '24px Arial';
-        this.ctx.fillStyle = this.colors.TEXT;
-        this.ctx.fillText('Drücke ENTER für neues Spiel', this.canvas.width / 2, this.canvas.height / 2 + 30);
-        this.ctx.fillText('Drücke M für Menü', this.canvas.width / 2, this.canvas.height / 2 + 65);
-    }
-
-    /**
-     * Zeichnet einen Maus-Hover-Effekt
-     * @param {number} row 
-     * @param {number} col 
-     */
-    drawHover(row, col) {
-        if (this.game.getGameState() !== GAME_CONSTANTS.STATE.PLAYING) return;
-        
-        const cellSize = GAME_CONSTANTS.CELL_SIZE;
-        const padding = GAME_CONSTANTS.BOARD_PADDING;
-        
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.fillRect(
-            padding + col * cellSize + 2,
-            padding + row * cellSize + 2,
-            cellSize - 4,
-            cellSize - 4
-        );
-    }
-}
-
-// ==================== HAUPTSTEUERUNG ====================
-class GameController {
-    constructor() {
-        this.game = new TicTacToeGame();
-        this.renderer = new GameRenderer(this.game);
-        this.canvas = null;
-        this.isRunning = false;
-        
-        // Event-Listener für Tastatur
-        this.keyboardHandlers = {};
-    }
-
-    /**
-     * Initialisiert das Spiel
-     * @param {string} canvasId - ID des Canvas-Elements
-     */
-    init(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        
-        if (!this.canvas) {
-            console.error('Canvas nicht gefunden!');
-            return false;
-        }
-        
-        this.renderer.init(this.canvas);
-        
-        // Event-Listener für Tastatur
-        document.addEventListener('keydown', (e) => this._handleKeyPress(e));
-        
-        // Event-Listener für Mausklicks
-        this.canvas.addEventListener('click', (e) => this._handleClick(e));
-        
-        // Mausbewegung für Hover-Effekt
-        this.canvas.addEventListener('mousemove', (e) => this._handleMouseMove(e));
-        
-        this.logger.log('Spiel-Controller initialisiert', 'INFO');
-        return true;
-    }
-
+    
     /**
      * Startet das Spiel
      */
     start() {
-        this.isRunning = true;
-        this.game.startNewGame();
-        this.gameLoop();
-        this.logger.log('Spiel gestartet', 'INFO');
-    }
-
-    /**
-     * Haupt-Spielschleife
-     */
-    gameLoop() {
-        if (!this.isRunning) return;
-        
-        this.renderer.draw();
-        requestAnimationFrame(() => this.gameLoop());
-    }
-
-    /**
-     * Behandelt Tastendruck
-     * @param {KeyboardEvent} event 
-     */
-    _handleKeyPress(event) {
-        const key = event.key.toLowerCase();
-        
-        switch (key) {
-            case 'enter':
-                if (this.game.getGameState() === GAME_CONSTANTS.STATE.MENU ||
-                    this.game.getGameState() === GAME_CONSTANTS.STATE.GAME_OVER) {
-                    this.game.startNewGame();
-                }
-                break;
-                
-            case 'p':
-                if (this.game.getGameState() === GAME_CONSTANTS.STATE.PLAYING ||
-                    this.game.getGameState() === GAME_CONSTANTS.STATE.PAUSED) {
-                    this.game.togglePause();
-                }
-                break;
-                
-            case 'm':
-                if (this.game.getGameState() === GAME_CONSTANTS.STATE.GAME_OVER) {
-                    this.game.setGameState(GAME_CONSTANTS.STATE.MENU);
-                }
-                break;
-                
-            case '1':
-                this.game.setDifficulty(GAME_CONSTANTS.DIFFICULTY.EASY);
-                break;
-                
-            case '2':
-                this.game.setDifficulty(GAME_CONSTANTS.DIFFICULTY.MEDIUM);
-                break;
-                
-            case '3':
-                this.game.setDifficulty(GAME_CONSTANTS.DIFFICULTY.HARD);
-                break;
-                
-            case 'r':
-                if (event.ctrlKey || event.metaKey) {
-                    // Strg+R oder Cmd+R verhindern
-                    event.preventDefault();
-                    this.game.resetScore();
-                    this.game.startNewGame();
-                }
-                break;
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.isPaused = false;
+            this.isGameOver = false;
+            this._gameLoop();
+            this.logger.info('Spiel gestartet');
         }
     }
-
-    /**
-     * Behandelt Mausklicks
-     * @param {MouseEvent} event 
-     */
-    _handleClick(event) {
-        if (this.game.getGameState() !== GAME_CONSTANTS.STATE.PLAYING) return;
-        
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        const cellSize = GAME_CONSTANTS.CELL_SIZE;
-        const padding = GAME_CONSTANTS.BOARD_PADDING;
-        
-        // Berechne Zeile und Spalte
-        const col = Math.floor((x - padding) / cellSize);
-        const row = Math.floor((y - padding) / cellSize);
-        
-        // Prüfe ob Klick im gültigen Bereich
-        if (row >= 0 && row < GAME_CONSTANTS.GRID_SIZE &&
-            col >= 0 && col < GAME_CONSTANTS.GRID_SIZE) {
-            
-            // Spielerzug ausführen
-            if (this.game.makeMove(row, col)) {
-                this.logger.log(`Spieler hat auf (${row}, ${col}) geklickt`, 'DEBUG');
-                
-                // Wenn KI am Zug ist, führe KI-Zug aus
-                if (this.game.getGameState() === GAME_CONSTANTS.STATE.PLAYING &&
-                    this.game.getCurrentPlayer() === GAME_CONSTANTS.SYMBOLS.AI) {
-                    setTimeout(() => this._makeAIMove(), 500);
-                }
-            }
-        }
-    }
-
-    /**
-     * Behandelt Mausbewegung für Hover-Effekt
-     * @param {MouseEvent} event 
-     */
-    _handleMouseMove(event) {
-        // Hover-Effekt wird in der Render-Schleife gehandhabt
-        // Hier können zusätzliche Logik hinzugefügt werden
-    }
-
-    /**
-     * Führt einen KI-Zug aus
-     */
-    _makeAIMove() {
-        if (this.game.getGameState() !== GAME_CONSTANTS.STATE.PLAYING) return;
-        
-        const difficultyParams = this.game.getDifficultyParams();
-        let move = null;
-        
-        // Minimax für schwere Schwierigkeit
-        if (difficultyParams.optimalPlay) {
-            move = this._getBestMove();
-        } else {
-            // Prüfe auf Gewinnmöglichkeit
-            if (difficultyParams.winPriority) {
-                move = this._findWinningMove(GAME_CONSTANTS.SYMBOLS.AI);
-            }
-            
-            // Prüfe auf Blockierung des Spielers
-            if (!move && difficultyParams.blockPriority) {
-                move = this._findWinningMove(GAME_CONSTANTS.SYMBOLS.PLAYER);
-            }
-            
-            // Zufälliger Zug
-            if (!move && Math.random() < difficultyParams.randomMoveChance) {
-                move = this._getRandomMove();
-            }
-            
-            // Wenn kein Zug gefunden, nimm besten verfügbaren
-            if (!move) {
-                move = this._getBestMove();
-            }
-        }
-        
-        if (move) {
-            this.game.makeMove(move.row, move.col);
-        }
-    }
-
-    /**
-     * Findet einen Gewinnzug für einen Spieler
-     * @param {string} player - Spieler-Symbol
-     * @returns {object|null} - Position oder null
-     */
-    _findWinningMove(player) {
-        for (let row = 0; row < GAME_CONSTANTS.GRID_SIZE; row++) {
-            for (let col = 0; col < GAME_CONSTANTS.GRID_SIZE; col++) {
-                if (this.game.board[row][col] === GAME_CONSTANTS.SYMBOLS.EMPTY) {
-                    // Simuliere Zug
-                    this.game.board[row][col] = player;
-                    const wins = this.game.checkWin(player);
-                    this.game.board[row][col] = GAME_CONSTANTS.SYMBOLS.EMPTY;
-                    
-                    if (wins) {
-                        return { row, col };
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Findet einen zufälligen gültigen Zug
-     * @returns {object|null}
-     */
-    _getRandomMove() {
-        const emptyCells = [];
-        
-        for (let row = 0; row < GAME_CONSTANTS.GRID_SIZE; row++) {
-            for (let col = 0; col < GAME_CONSTANTS.GRID_SIZE; col++) {
-                if (this.game.board[row][col] === GAME_CONSTANTS.SYMBOLS.EMPTY) {
-                    emptyCells.push({ row, col });
-                }
-            }
-        }
-        
-        if (emptyCells.length > 0) {
-            const randomIndex = Math.floor(Math.random() * emptyCells.length);
-            return emptyCells[randomIndex];
-        }
-        
-        return null;
-    }
-
-    /**
-     * Findet den besten Zug (einfache Bewertung)
-     * @returns {object|null}
-     */
-    _getBestMove() {
-        // Priorität: Mitte > Ecken > Kanten
-        const priorities = [
-            { row: 1, col: 1 },  // Mitte
-            { row: 0, col: 0 }, { row: 0, col: 2 },  // Obere Ecken
-            { row: 2, col: 0 }, { row: 2, col: 2 },  // Untere Ecken
-            { row: 0, col: 1 }, { row: 1, col: 0 },  // Kanten oben/links
-            { row: 1, col: 2 }, { row: 2, col: 1 }   // Kanten rechts/unten
-        ];
-        
-        for (const pos of priorities) {
-            if (this.game.board[pos.row][pos.col] === GAME_CONSTANTS.SYMBOLS.EMPTY) {
-                return pos;
-            }
-        }
-        
-        return this._getRandomMove();
-    }
-
+    
     /**
      * Stoppt das Spiel
      */
     stop() {
         this.isRunning = false;
-        this.logger.log('Spiel gestoppt', 'INFO');
+        if (this.gameLoop) {
+            clearTimeout(this.gameLoop);
+            this.gameLoop = null;
+        }
+        this.logger.info('Spiel gestoppt');
     }
-
-    /**
-     * Gibt den Logger zurück
-     */
-    get logger() {
-        return this.game.logger;
-    }
-}
-
-// ==================== EXPORT FÜR VERWENDUNG ====================
-// Exportiere die Klassen für externe Verwendung
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        TicTacToeGame,
-        GameRenderer,
-        GameController,
-        GAME_CONSTANTS
-    };
-}
-
-// ==================== INITIALISIERUNG BEIM SEITENLADEN ====================
-document.addEventListener('DOMContentLoaded', () => {
-    const controller = new GameController();
     
-    if (controller.init('gameCanvas')) {
-        controller.start();
+    /**
+     * Pausiert oder setzt das Spiel fort
+     */
+    toggle_pause() {
+        if (this.isGameOver) {
+            this.logger.warn('Spiel ist beendet, kann nicht pausiert werden');
+            return;
+        }
         
-        // Debug-Info in der Konsole
-        console.log('🎮 TicTacToe Spiel geladen!');
-        console.log('Steuerung:');
-        console.log('  ENTER - Neues Spiel / Starten');
-        console.log('  P - Pause umschalten');
-        console.log('  M - Zum Menü');
-        console.log('  1 - Einfach');
-        console.log('  2 - Mittel');
-        console.log('  3 - Schwer');
-        console.log('  Strg+R - Punktestand zurücksetzen und neu starten');
+        this.isPaused = !this.isPaused;
+        
+        if (this.isPaused) {
+            this.logger.info('Spiel pausiert');
+        } else {
+            this.logger.info('Spiel fortgesetzt');
+            this._gameLoop();
+        }
     }
+    
+    /**
+     * Setzt die Schwierigkeitsstufe
+     * @param {string} level - 'easy', 'medium' oder 'hard'
+     */
+    set_difficulty(level) {
+        const levelMap = {
+            'easy': GAME_CONFIG.DIFFICULTY.EASY,
+            'medium': GAME_CONFIG.DIFFICULTY.MEDIUM,
+            'hard': GAME_CONFIG.DIFFICULTY.HARD
+        };
+        
+        if (levelMap[level]) {
+            this.difficulty = levelMap[level];
+            this.gameSpeed = this.difficulty.speed;
+            this.logger.info(`Schwierigkeit gesetzt auf: ${this.difficulty.name}`);
+            
+            // Wenn das Spiel läuft, neu starten
+            if (this.isRunning) {
+                this._resetGame();
+                this._draw();
+            }
+        } else {
+            this.logger.error(`Ungültige Schwierigkeitsstufe: ${level}`);
+        }
+    }
+    
+    /**
+     * Startet das Spiel neu
+     */
+    restart() {
+        this.stop();
+        this._resetGame();
+        this._draw();
+        this.start();
+        this.logger.info('Spiel neu gestartet');
+    }
+    
+    /**
+     * Haupt-Spielschleife
+     */
+    _gameLoop() {
+        if (!this.isRunning || this.isPaused || this.isGameOver) {
+            return;
+        }
+        
+        this._update();
+        this._draw();
+        
+        this.gameLoop = setTimeout(() => this._gameLoop(), this.gameSpeed);
+    }
+    
+    /**
+     * Aktualisiert den Spielzustand
+     */
+    _update() {
+        // Richtung aktualisieren
+        this.direction = { ...this.nextDirection };
+        
+        // Neue Kopfposition berechnen
+        const head = this.snake[0];
+        const newHead = {
+            x: head.x + this.direction.x,
+            y: head.y + this.direction.y
+        };
+        
+        // Kollisionserkennung
+        if (this._checkCollision(newHead.x, newHead.y)) {
+            this._handleGameOver();
+            return;
+        }
+        
+        // Schlange bewegen
+        this.snake.unshift(newHead);
+        
+        // Nahrung essen
+        if (newHead.x === this.food.x && newHead.y === this.food.y) {
+            this._handleEatFood();
+        } else {
+            this.snake.pop();
+        }
+        
+        // Gegner aktualisieren
+        this._updateEnemies();
+        
+        // Gegner-Kollision nach Bewegung prüfen
+        for (const enemy of this.enemies) {
+            if (newHead.x === enemy.x && newHead.y === enemy.y) {
+                this._handleGameOver();
+                return;
+            }
+        }
+    }
+    
+    /**
+     * Behandelt das Essen von Nahrung
+     */
+    _handleEatFood() {
+        this.score += 10;
+        this.logger.info(`Nahrung gegessen! Punktzahl: ${this.score}`);
+        this._generateFood();
+        
+        // Gelegentlich neue Gegner hinzufügen
+        if (this.score % 50 === 0 && this.enemies.length < this._getEnemyCount() + 2) {
+            this._generateEnemies();
+        }
+    }
+    
+    /**
+     * Behandelt Game Over
+     */
+    _handleGameOver() {
+        this.isGameOver = true;
+        this.isRunning = false;
+        this.logger.info(`Spiel beendet! Endpunktzahl: ${this.score}`);
+        this._draw();
+    }
+    
+    /**
+     * Zeichnet das Spiel
+     */
+    _draw() {
+        // Hintergrund
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.BACKGROUND;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Gitter zeichnen
+        this._drawGrid();
+        
+        // Hindernisse zeichnen
+        this._drawObstacles();
+        
+        // Nahrung zeichnen
+        this._drawFood();
+        
+        // Gegner zeichnen
+        this._drawEnemies();
+        
+        // Schlange zeichnen
+        this._drawSnake();
+        
+        // UI-Elemente
+        this._drawScore();
+        
+        // Game Over Overlay
+        if (this.isGameOver) {
+            this._drawGameOver();
+        }
+        
+        // Pause Overlay
+        if (this.isPaused && !this.isGameOver) {
+            this._drawPaused();
+        }
+    }
+    
+    /**
+     * Zeichnet das Gitter
+     */
+    _drawGrid() {
+        this.ctx.strokeStyle = GAME_CONFIG.COLORS.GRID;
+        this.ctx.lineWidth = 0.5;
+        
+        for (let x = 0; x <= this.gridWidth; x++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x * this.cellSize, 0);
+            this.ctx.lineTo(x * this.cellSize, this.canvas.height);
+            this.ctx.stroke();
+        }
+        
+        for (let y = 0; y <= this.gridHeight; y++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y * this.cellSize);
+            this.ctx.lineTo(this.canvas.width, y * this.cellSize);
+            this.ctx.stroke();
+        }
+    }
+    
+    /**
+     * Zeichnet die Schlange
+     */
+    _drawSnake() {
+        for (let i = 0; i < this.snake.length; i++) {
+            const segment = this.snake[i];
+            const isHead = i === 0;
+            
+            this.ctx.fillStyle = isHead ? 
+                GAME_CONFIG.COLORS.SNAKE_HEAD : 
+                GAME_CONFIG.COLORS.SNAKE_BODY;
+            
+            this.ctx.fillRect(
+                segment.x * this.cellSize + 1,
+                segment.y * this.cellSize + 1,
+                this.cellSize - 2,
+                this.cellSize - 2
+            );
+            
+            // Augen für den Kopf
+            if (isHead) {
+                this._drawSnakeEyes(segment);
+            }
+        }
+    }
+    
+    /**
+     * Zeichnet die Augen der Schlange
+     */
+    _drawSnakeEyes(head) {
+        this.ctx.fillStyle = '#ffffff';
+        const eyeSize = this.cellSize / 5;
+        const offset = this.cellSize / 4;
+        
+        // Linkes Auge
+        this.ctx.beginPath();
+        this.ctx.arc(
+            head.x * this.cellSize + offset,
+            head.y * this.cellSize + offset,
+            eyeSize,
+            0,
+            Math.PI * 2
+        );
+        this.ctx.fill();
+        
+        // Rechtes Auge
+        this.ctx.beginPath();
+        this.ctx.arc(
+            head.x * this.cellSize + this.cellSize - offset,
+            head.y * this.cellSize + offset,
+            eyeSize,
+            0,
+            Math.PI * 2
+        );
+        this.ctx.fill();
+    }
+    
+    /**
+     * Zeichnet die Nahrung
+     */
+    _drawFood() {
+        if (!this.food) return;
+        
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.FOOD;
+        this.ctx.beginPath();
+        this.ctx.arc(
+            this.food.x * this.cellSize + this.cellSize / 2,
+            this.food.y * this.cellSize + this.cellSize / 2,
+            this.cellSize / 2 - 2,
+            0,
+            Math.PI * 2
+        );
+        this.ctx.fill();
+    }
+    
+    /**
+     * Zeichnet die Hindernisse
+     */
+    _drawObstacles() {
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.OBSTACLE;
+        
+        for (const obs of this.obstacles) {
+            this.ctx.fillRect(
+                obs.x * this.cellSize + 1,
+                obs.y * this.cellSize + 1,
+                this.cellSize - 2,
+                this.cellSize - 2
+            );
+        }
+    }
+    
+    /**
+     * Zeichnet die Gegner
+     */
+    _drawEnemies() {
+        for (const enemy of this.enemies) {
+            this.ctx.fillStyle = GAME_CONFIG.COLORS.ENEMY;
+            
+            // Dreieck für Gegner
+            this.ctx.beginPath();
+            this.ctx.moveTo(
+                enemy.x * this.cellSize + this.cellSize / 2,
+                enemy.y * this.cellSize + 2
+            );
+            this.ctx.lineTo(
+                enemy.x * this.cellSize + 2,
+                enemy.y * this.cellSize + this.cellSize - 2
+            );
+            this.ctx.lineTo(
+                enemy.x * this.cellSize + this.cellSize - 2,
+                enemy.y * this.cellSize + this.cellSize - 2
+            );
+            this.ctx.closePath();
+            this.ctx.fill();
+        }
+    }
+    
+    /**
+     * Zeichnet die Punktzahl
+     */
+    _drawScore() {
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.TEXT;
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText(`Punkte: ${this.score}`, 10, 25);
+        this.ctx.fillText(`Schwierigkeit: ${this.difficulty.name}`, 10, 45);
+    }
+    
+    /**
+     * Zeichnet den Game Over Screen
+     */
+    _drawGameOver() {
+        // Halbtransparenter Hintergrund
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.UI_BACKGROUND;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Game Over Text
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.TEXT;
+        this.ctx.font = 'bold 32px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('SPIEL VORBEI', this.canvas.width / 2, this.canvas.height / 2 - 30);
+        
+        // Punktzahl
+        this.ctx.font = '20px Arial';
+        this.ctx.fillText(`Endpunktzahl: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 10);
+        
+        // Neustart-Anweisung
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText('Drücke R für Neustart', this.canvas.width / 2, this.canvas.height / 2 + 50);
+        
+        // Textausrichtung zurücksetzen
+        this.ctx.textAlign = 'left';
+    }
+    
+    /**
+     * Zeichnet den Pause Screen
+     */
+    _drawPaused() {
+        // Halbtransparenter Hintergrund
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.UI_BACKGROUND;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Pause Text
+        this.ctx.fillStyle = GAME_CONFIG.COLORS.TEXT;
+        this.ctx.font = 'bold 32px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('PAUSIERT', this.canvas.width / 2, this.canvas.height / 2);
+        
+        // Fortsetzungs-Anweisung
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText('Drücke P zum Fortsetzen', this.canvas.width / 2, this.canvas.height / 2 + 40);
+        
+        // Textausrichtung zurücksetzen
+        this.ctx.textAlign = 'left';
+    }
+    
+    /**
+     * Richtungsänderung basierend auf Tastatureingabe
+     */
+    _handleKeyboard(event) {
+        // Verhindern, dass die Pfeiltasten das Fenster scrollen
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
+            event.preventDefault();
+        }
+        
+        switch (event.key) {
+            case 'ArrowUp':
+                if (this.direction.y !== 1) {
+                    this.nextDirection = { x: 0, y: -1 };
+                }
+                break;
+            case 'ArrowDown':
+                if (this.direction.y !== -1) {
+                    this.nextDirection = { x: 0, y: 1 };
+                }
+                break;
+            case 'ArrowLeft':
+                if (this.direction.x !== 1) {
+                    this.nextDirection = { x: -1, y: 0 };
+                }
+                break;
+            case 'ArrowRight':
+                if (this.direction.x !== -1) {
+                    this.nextDirection = { x: 1, y: 0 };
+                }
+                break;
+            case 'p':
+            case 'P':
+                this.toggle_pause();
+                break;
+            case 'r':
+            case 'R':
+                this.restart();
+                break;
+            case ' ':
+                // Leertaste startet das Spiel
+                if (!this.isRunning && !this.isGameOver) {
+                    this.start();
+                } else if (this.isGameOver) {
+                    this.restart();
+                }
+                break;
+        }
+    }
+    
+    /**
+     * Richtet die Tastatur-Event-Listener ein
+     */
+    _setupKeyboardListeners() {
+        document.addEventListener('keydown', (event) => this._handleKeyboard(event));
+    }
+    
+    /**
+     * Gibt den aktuellen Spielstand zurück
+     */
+    getGameState() {
+        return {
+            score: this.score,
+            isRunning: this.isRunning,
+            isPaused: this.isPaused,
+            isGameOver: this.isGameOver,
+            difficulty: this.difficulty.name,
+            snakeLength: this.snake.length,
+            enemyCount: this.enemies.length,
+            obstacleCount: this.obstacles.length
+        };
+    }
+}
+
+// ==================== INITIALISIERUNG ====================
+// Wenn das DOM geladen ist, Spiel initialisieren
+document.addEventListener('DOMContentLoaded', () => {
+    const game = new GameLogic('gameCanvas');
+    
+    // Buttons für UI-Interaktion
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const difficultySelect = document.getElementById('difficultySelect');
+    
+    if (startBtn) {
+        startBtn.addEventListener('click', () => game.start());
+    }
+    
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => game.toggle_pause());
+    }
+    
+    if (restartBtn) {
+        restartBtn.addEventListener('click', () => game.restart());
+    }
+    
+    if (difficultySelect) {
+        difficultySelect.addEventListener('change', (e) => {
+            game.set_difficulty(e.target.value);
+        });
+    }
+    
+    // Globales Spiel-Objekt für Debugging
+    window.game = game;
 });
+
+/**
+ * Unit-Tests für die Spiel-Logik
+ */
+class GameLogicTests {
+    static runTests() {
+        console.log('Starte Unit-Tests...');
+        
+        // Test 1: Kollisionserkennung
+        this.testCollisionDetection();
+        
+        // Test 2: Schwierigkeitsstufen
+        this.testDifficultyLevels();
+        
+        // Test 3: Position Belegung
+        this.testPositionOccupied();
+        
+        console.log('Alle Tests abgeschlossen!');
+    }
+    
+    static testCollisionDetection() {
+        console.log('Teste Kollisionserkennung...');
+        
+        const game = new GameLogic('testCanvas');
+        game.gridWidth = 10;
+        game.gridHeight = 10;
+        game.snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }];
+        
+        // Test Wand-Kollision
+        console.assert(game._checkCollision(-1, 5) === true, 'Wand-Kollision links fehlgeschlagen');
+        console.assert(game._checkCollision(10, 5) === true, 'Wand-Kollision rechts fehlgeschlagen');
+        console.assert(game._checkCollision(5, -1) === true, 'Wand-Kollision oben fehlgeschlagen');
+        console.assert(game._checkCollision(5, 10) === true, 'Wand-Kollision unten fehlgeschlagen');
+        
+        // Test Selbst-Kollision
+        console.assert(game._checkCollision(4, 5) === true, 'Selbst-Kollision fehlgeschlagen');
+        
+        // Test keine Kollision
+        console.assert(game._checkCollision(6, 5) === false, 'Keine Kollision fehlgeschlagen');
+        
+        console.log('Kollisionserkennung: OK');
+    }
+    
+    static testDifficultyLevels() {
+        console.log('Teste Schwierigkeitsstufen...');
+        
+        const game = new GameLogic('testCanvas');
+        
+        game.set_difficulty('easy');
+        console.assert(game.difficulty === GAME_CONFIG.DIFFICULTY.EASY, 'Einfach fehlgeschlagen');
+        
+        game.set_difficulty('medium');
+        console.assert(game.difficulty === GAME_CONFIG.DIFFICULTY.MEDIUM, 'Mittel fehlgeschlagen');
+        
+        game.set_difficulty('hard');
+        console.assert(game.difficulty === GAME_CONFIG.DIFFICULTY.HARD, 'Schwer fehlgeschlagen');
+        
+        console.log('Schwierigkeitsstufen: OK');
+    }
+    
+    static testPositionOccupied() {
+        console.log('Teste Positionsbelegung...');
+        
+        const game = new GameLogic('testCanvas');
+        game.snake = [{ x: 5, y: 5 }];
+        game.food = { x: 3, y: 3 };
+        game.obstacles = [{ x: 2, y: 2 }];
+        
+        console.assert(game._isPositionOccupied(5, 5) === true, 'Schlange fehlgeschlagen');
+        console.assert(game._isPositionOccupied(3, 3) === true, 'Nahrung fehlgeschlagen');
+        console.assert(game._isPositionOccupied(2, 2) === true, 'Hindernis fehlgeschlagen');
+        console.assert(game._isPositionOccupied(1, 1) === false, 'Leere Position fehlgeschlagen');
+        
+        console.log('Positionsbelegung: OK');
+    }
+}
+
+// Tests ausführen (nur im Entwicklungsmodus)
+if (window.location.search.includes('test=true')) {
+    GameLogicTests.runTests();
+}
