@@ -1,0 +1,76 @@
+/* Styles für Tic-Tac-Toe Benutzeroberfläche */
+
+/* Farbschema */
+:root {
+    --background: #2C3E50;
+    --grid: #ECF0F1;
+    --player-x: #E74C3C;
+    --player-o: #3498DB;
+    --button: #27AE60;
+    --button-hover: #2ECC71;
+    --text: #ECF0F1;
+    --text-secondary: #BDC3C7;
+}
+
+/* Spielfeld-Container */
+.game-container {
+    background-color: var(--background);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+/* Buttons */
+.game-button {
+    background-color: var(--grid);
+    border: none;
+    border-radius: 5px;
+    font-size: 48px;
+    font-weight: bold;
+    min-width: 100px;
+    min-height: 100px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.game-button:hover {
+    background-color: #BDC3C7;
+}
+
+.game-button.x {
+    color: var(--player-x);
+}
+
+.game-button.o {
+    color: var(--player-o);
+}
+
+/* Steuerungsbuttons */
+.control-button {
+    background-color: var(--button);
+    color: var(--text);
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.control-button:hover {
+    background-color: var(--button-hover);
+}
+
+/* Status-Anzeige */
+.status-label {
+    color: var(--text);
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+/* Titel */
+.title {
+    color: var(--text);
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+}
