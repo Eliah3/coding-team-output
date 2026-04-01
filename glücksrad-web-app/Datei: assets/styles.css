@@ -1,76 +1,94 @@
-/* Styles für Tic-Tac-Toe Benutzeroberfläche */
+/* 
+Tic-Tac-Toe Stylesheet 
+Dieses Stylesheet enthält Design-Variablen und Stile für das Spiel
+*/
 
-/* Farbschema */
+/* Farbpalette */
 :root {
     --background: #2C3E50;
-    --grid: #ECF0F1;
-    --player-x: #E74C3C;
-    --player-o: #3498DB;
-    --button: #27AE60;
-    --button-hover: #2ECC71;
-    --text: #ECF0F1;
-    --text-secondary: #BDC3C7;
+    --frame: #34495E;
+    --button: #ECF0F1;
+    --button-hover: #BDC3C7;
+    --text: #2C3E50;
+    --text-light: #ECF0F1;
+    --x-color: #E74C3C;
+    --o-color: #3498DB;
+    --win-highlight: #27AE60;
+    --draw-color: #F39C12;
 }
 
-/* Spielfeld-Container */
-.game-container {
-    background-color: var(--background);
-    padding: 20px;
+/* Spielfeld-Stile */
+.game-board {
+    background-color: var(--frame);
     border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
-/* Buttons */
-.game-button {
-    background-color: var(--grid);
-    border: none;
-    border-radius: 5px;
-    font-size: 48px;
-    font-weight: bold;
-    min-width: 100px;
-    min-height: 100px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.game-button:hover {
-    background-color: #BDC3C7;
-}
-
-.game-button.x {
-    color: var(--player-x);
-}
-
-.game-button.o {
-    color: var(--player-o);
-}
-
-/* Steuerungsbuttons */
-.control-button {
+/* Button-Stile */
+.cell-button {
     background-color: var(--button);
-    color: var(--text);
-    border: none;
+    border: 2px solid var(--frame);
     border-radius: 5px;
-    padding: 10px 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.control-button:hover {
-    background-color: var(--button-hover);
-}
-
-/* Status-Anzeige */
-.status-label {
-    color: var(--text);
-    font-size: 18px;
-    margin: 10px 0;
-}
-
-/* Titel */
-.title {
-    color: var(--text);
-    font-size: 32px;
+    font-family: 'Arial', sans-serif;
     font-weight: bold;
-    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.cell-button:hover {
+    background-color: var(--button-hover);
+    transform: scale(1.05);
+}
+
+.cell-button.x {
+    color: var(--x-color);
+}
+
+.cell-button.o {
+    color: var(--o-color);
+}
+
+.cell-button.winner {
+    background-color: var(--win-highlight);
+    color: var(--text-light);
+}
+
+/* Text-Stile */
+.title {
+    color: var(--text-light);
+    font-family: 'Helvetica', sans-serif;
+    font-weight: bold;
+}
+
+.status {
+    color: var(--text-light);
+    font-family: 'Helvetica', sans-serif;
+}
+
+.score {
+    color: var(--text-light);
+    font-family: 'Helvetica', sans-serif;
+    font-size: 14px;
+}
+
+/* Animations-Stile */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.winner-animation {
+    animation: pulse 0.5s ease-in-out 3;
+}
+
+/* Responsive Design */
+@media (max-width: 400px) {
+    .game-container {
+        padding: 5px;
+    }
+    
+    .cell-button {
+        font-size: 24px;
+    }
 }

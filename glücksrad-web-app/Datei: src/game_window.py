@@ -1,8 +1,6 @@
 """
-Benutzeroberfläche für das Tic-Tac-Toe-Spiel.
-
-Dieses Modul enthält die Klasse GameWindow, die für die Darstellung
-der grafischen Benutzeroberfläche verantwortlich ist.
+Game Window Module für Tic-Tac-Toe
+Enthält die grafische Benutzeroberfläche und Event-Handling
 """
 
 import tkinter as tk
@@ -10,7 +8,7 @@ from tkinter import messagebox
 from typing import Optional, Tuple
 import logging
 
-# Konfiguration für Logging
+# Logging-Konfiguration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -21,394 +19,365 @@ logger = logging.getLogger(__name__)
 class GameWindow:
     """
     Hauptklasse für das Tic-Tac-Toe-Fenster.
-    
-    Verwaltet die grafische Oberfläche des Spiels, einschließlich
-    des Spielfelds, der Spielsteine und der Steuerelemente.
+    Verwaltet die GUI, das Spielfeld und die Spielereignisse.
     """
     
     # Farbschema für das Spiel
     COLORS = {
         'background': '#2C3E50',
-        'grid': '#ECF0F1',
-        'player_x': '#E74C3C',
-        'player_o': '#3498DB',
-        'button': '#27AE60',
-        'button_hover': '#2ECC71',
-        'text': '#ECF0F1',
-        'text_secondary': '#BDC3C7'
+        'frame': '#34495E',
+        'button': '#ECF0F1',
+        'button_hover': '#BDC3C7',
+        'text': '#2C3E50',
+        'text_light': '#ECF0F1',
+        'x_color': '#E74C3C',
+        'o_color': '#3498DB',
+        'win_highlight': '#27AE60'
     }
     
-    def __init__(self, game_logic, ai_module=None):
+    def __init__(self, root: tk.Tk) -> None:
         """
         Initialisiert das Spielefenster.
         
         Args:
-            game_logic: Instanz der GameLogic-Klasse
-            ai_module: Optionale Instanz der KI-Klasse für den Computergegner
+            root: Das Haupt-Tkinter-Fenster
         """
-        self.game_logic = game_logic
-        self.ai_module = ai_module
-        self.root = tk.Tk()
+        self.root = root
         self.root.title("Tic-Tac-Toe")
-        self.root.geometry("500x600")
-        self.root.configure(bg=self.COLORS['background'])
+        self.root.geometry("400x500")
         self.root.resizable(False, False)
+        self.root.configure(bg=self.COLORS['background'])
         
         # Spielstatus
+        self.current_player: str = 'X'
+        self.board: list = [['' for _ in range(3)] for _ in range(3)]
+        self.game_over: bool = False
+        self.player_wins: int = 0
+        self.ai_wins: int = 0
+        self.draws: int = 0
+        
+        # GUI-Komponenten
         self.buttons: list = []
-        self.current_player = 'X'
-        self.game_active = True
-        self.game_mode = 'pvp'  # 'pvp' oder 'pvc' (Player vs Computer)
+        self.status_label: Optional[tk.Label] = None
+        self.score_label: Optional[tk.Label] = None
         
-        # Schriftarten
-        self.font_large = ('Arial', 48, 'bold')
-        self.font_medium = ('Arial', 24, 'bold')
-        self.font_small = ('Arial', 12)
-        
-        # UI-Komponenten erstellen
+        # UI-Komponenten initialisieren
         self._create_widgets()
-        
-        # Event-Handler binden
-        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
-        
         logger.info("Spielefenster erfolgreich initialisiert")
     
     def _create_widgets(self) -> None:
-        """Erstellt alle UI-Widgets für das Fenster."""
+        """Erstellt alle GUI-Widgets für das Fenster."""
+        
+        # Hauptframe
+        main_frame = tk.Frame(
+            self.root,
+            bg=self.COLORS['background'],
+            padx=20,
+            pady=20
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Titel-Label
         title_label = tk.Label(
-            self.root,
+            main_frame,
             text="Tic-Tac-Toe",
-            font=('Arial', 28, 'bold'),
+            font=('Helvetica', 24, 'bold'),
             bg=self.COLORS['background'],
-            fg=self.COLORS['text']
+            fg=self.COLORS['text_light']
         )
-        title_label.pack(pady=20)
+        title_label.pack(pady=(0, 10))
         
-        # Status-Anzeige (aktueller Spieler)
-        self.status_label = tk.Label(
-            self.root,
-            text="Spieler X ist dran",
-            font=self.font_small,
+        # Punktestand-Anzeige
+        self.score_label = tk.Label(
+            main_frame,
+            text=self._get_score_text(),
+            font=('Helvetica', 12),
             bg=self.COLORS['background'],
-            fg=self.COLORS['text_secondary']
+            fg=self.COLORS['text_light']
         )
-        self.status_label.pack(pady=5)
+        self.score_label.pack(pady=(0, 15))
+        
+        # Status-Label (aktueller Spieler)
+        self.status_label = tk.Label(
+            main_frame,
+            text=f"Spieler {self.current_player} ist dran",
+            font=('Helvetica', 14),
+            bg=self.COLORS['background'],
+            fg=self.COLORS['text_light']
+        )
+        self.status_label.pack(pady=(0, 15))
         
         # Spielfeld-Frame
-        self.game_frame = tk.Frame(
-            self.root,
-            bg=self.COLORS['background']
+        board_frame = tk.Frame(
+            main_frame,
+            bg=self.COLORS['frame'],
+            padx=5,
+            pady=5
         )
-        self.game_frame.pack(pady=20)
+        board_frame.pack(pady=(0, 15))
         
-        # Spielfeld-Buttons erstellen
-        self._create_game_buttons()
-        
-        # Steuerungs-Frame
-        control_frame = tk.Frame(
-            self.root,
-            bg=self.COLORS['background']
-        )
-        control_frame.pack(pady=20)
-        
-        # Neues Spiel Button
-        self.new_game_btn = tk.Button(
-            control_frame,
-            text="Neues Spiel",
-            font=self.font_small,
-            bg=self.COLORS['button'],
-            fg=self.COLORS['text'],
-            activebackground=self.COLORS['button_hover'],
-            command=self.reset_game,
-            width=15,
-            height=2
-        )
-        self.new_game_btn.pack(side=tk.LEFT, padx=10)
-        
-        # Spielmodus-Button
-        self.mode_btn = tk.Button(
-            control_frame,
-            text="Modus: PvP",
-            font=self.font_small,
-            bg='#8E44AD',
-            fg=self.COLORS['text'],
-            command=self.toggle_game_mode,
-            width=15,
-            height=2
-        )
-        self.mode_btn.pack(side=tk.LEFT, padx=10)
-        
-        # Schwierigkeitsgrad-Auswahl (nur für PvC-Modus)
-        self.difficulty_frame = tk.Frame(
-            self.root,
-            bg=self.COLORS['background']
-        )
-        self.difficulty_frame.pack(pady=10)
-        
-        self.difficulty_label = tk.Label(
-            self.difficulty_frame,
-            text="Schwierigkeit:",
-            font=self.font_small,
-            bg=self.COLORS['background'],
-            fg=self.COLORS['text_secondary']
-        )
-        self.difficulty_label.pack(side=tk.LEFT, padx=5)
-        
-        self.difficulty_var = tk.StringVar(value="medium")
-        difficulties = [("Leicht", "easy"), ("Mittel", "medium"), ("Schwer", "hard")]
-        
-        for text, value in difficulties:
-            rb = tk.Radiobutton(
-                self.difficulty_frame,
-                text=text,
-                variable=self.difficulty_var,
-                value=value,
-                bg=self.COLORS['background'],
-                fg=self.COLORS['text'],
-                selectcolor=self.COLORS['background'],
-                command=self.set_difficulty
-            )
-            rb.pack(side=tk.LEFT, padx=5)
-        
-        # Initial den Schwierigkeitsgrad-Frame ausblenden
-        self.difficulty_frame.pack_forget()
-    
-    def _create_game_buttons(self) -> None:
-        """Erstellt die 3x3 Buttons für das Spielfeld."""
-        self.buttons = []
-        
+        # 3x3 Button-Grid erstellen
         for row in range(3):
             button_row = []
             for col in range(3):
                 btn = tk.Button(
-                    self.game_frame,
-                    text="",
-                    font=self.font_large,
+                    board_frame,
+                    text='',
+                    font=('Helvetica', 32, 'bold'),
                     width=3,
                     height=1,
-                    bg=self.COLORS['grid'],
-                    fg=self.COLORS['grid'],
-                    activebackground='#BDC3C7',
-                    command=lambda r=row, c=col: self._on_button_click(r, c)
+                    bg=self.COLORS['button'],
+                    fg=self.COLORS['text'],
+                    activebackground=self.COLORS['button_hover'],
+                    relief=tk.RAISED,
+                    borderwidth=3,
+                    command=lambda r=row, c=col: self._on_cell_click(r, c)
                 )
-                btn.grid(row=row, column=col, padx=5, pady=5)
+                btn.grid(row=row, column=col, padx=3, pady=3)
                 button_row.append(btn)
             self.buttons.append(button_row)
         
-        logger.info("Spielfeld-Buttons erstellt")
+        # Steuerungs-Buttons Frame
+        control_frame = tk.Frame(
+            main_frame,
+            bg=self.COLORS['background']
+        )
+        control_frame.pack(pady=10)
+        
+        # Neustart-Button
+        restart_btn = tk.Button(
+            control_frame,
+            text="Neues Spiel",
+            font=('Helvetica', 12),
+            bg=self.COLORS['button'],
+            fg=self.COLORS['text'],
+            padx=20,
+            pady=5,
+            command=self.restart_game
+        )
+        restart_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Beenden-Button
+        quit_btn = tk.Button(
+            control_frame,
+            text="Beenden",
+            font=('Helvetica', 12),
+            bg=self.COLORS['button'],
+            fg=self.COLORS['text'],
+            padx=20,
+            pady=5,
+            command=self.root.quit
+        )
+        quit_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Info-Label
+        info_label = tk.Label(
+            main_frame,
+            text="Klicke auf eine Zelle, um zu spielen",
+            font=('Helvetica', 10),
+            bg=self.COLORS['background'],
+            fg=self.COLORS['text_light']
+        )
+        info_label.pack(pady=(10, 0))
     
-    def _on_button_click(self, row: int, col: int) -> None:
+    def _get_score_text(self) -> str:
+        """Erstellt den Text für die Punktestand-Anzeige."""
+        return f"Spieler X: {self.player_wins} | Unentschieden: {self.draws} | Spieler O: {self.ai_wins}"
+    
+    def _on_cell_click(self, row: int, col: int) -> None:
         """
-        Behandelt einen Klick auf ein Spielfeld.
+        Behandelt einen Klick auf eine Spielfeldzelle.
         
         Args:
-            row: Reihe des geklickten Buttons (0-2)
-            col: Spalte des geklickten Buttons (0-2)
+            row: Die Reihe der geklickten Zelle (0-2)
+            col: Die Spalte der geklickten Zelle (0-2)
         """
-        if not self.game_active:
-            logger.info("Spiel ist beendet, Klick ignoriert")
+        # Prüfen ob Spiel beendet oder Zelle bereits belegt
+        if self.game_over or self.board[row][col] != '':
+            logger.debug(f"Übersprungen: Spiel beendet={self.game_over}, Zelle belegt={self.board[row][col]}")
             return
         
-        # Überprüfen, ob das Feld bereits belegt ist
-        if self.game_logic.get_cell(row, col) is not None:
-            logger.info(f"Feld ({row}, {col}) ist bereits belegt")
-            return
-        
-        # Spielzug ausführen
+        # Zug ausführen
         self._make_move(row, col)
         
-        # Wenn gegen Computer gespielt wird und das Spiel noch läuft
-        if self.game_active and self.game_mode == 'pvc' and self.current_player == 'O':
-            self.root.after(500, self._computer_move)
+        # Prüfen auf Gewinn oder Unentschieden
+        if self._check_winner():
+            self._handle_game_end()
+        elif self._check_draw():
+            self._handle_draw()
+        else:
+            # Spieler wechseln
+            self.current_player = 'O' if self.current_player == 'X' else 'X'
+            self._update_status()
+            logger.info(f"Spielerwechsel zu {self.current_player}")
     
-    def _make_move(self, row: int, col: int) -> bool:
+    def _make_move(self, row: int, col: int) -> None:
         """
-        Führt einen Spielzug aus.
+        Führt einen Zug aus.
         
         Args:
-            row: Reihe des Zuges
-            col: Spalte des Zuges
-            
-        Returns:
-            True wenn der Zug erfolgreich war, False sonst
+            row: Die Reihe des Zuges
+            col: Die Spalte des Zuges
         """
-        # Zug in der Logik aktualisieren
-        success = self.game_logic.make_move(row, col, self.current_player)
-        
-        if not success:
-            logger.warning(f"Zug fehlgeschlagen: ({row}, {col})")
-            return False
+        self.board[row][col] = self.current_player
         
         # Button aktualisieren
-        self._update_button(row, col)
+        button = self.buttons[row][col]
+        button.config(
+            text=self.current_player,
+            fg=self.COLORS['x_color'] if self.current_player == 'X' else self.COLORS['o_color']
+        )
         
-        logger.info(f"Spieler {self.current_player} setzt auf ({row}, {col})")
-        
-        # Auf Sieg prüfen
-        if self.game_logic.check_winner():
-            self._handle_game_end(f"Spieler {self.current_player} gewinnt!")
-            return True
-        
-        # Auf Unentschieden prüfen
-        if self.game_logic.is_board_full():
-            self._handle_game_end("Das Spiel endet unentschieden!")
-            return True
-        
-        # Spieler wechseln
-        self.current_player = 'O' if self.current_player == 'X' else 'X'
-        self._update_status()
-        
-        return True
+        logger.info(f"Spieler {self.current_player} setzt auf Position ({row}, {col})")
     
-    def _update_button(self, row: int, col: int) -> None:
+    def _check_winner(self) -> bool:
         """
-        Aktualisiert die Anzeige eines Buttons.
-        
-        Args:
-            row: Reihe des Buttons
-            col: Spalte des Buttons
-        """
-        value = self.game_logic.get_cell(row, col)
-        btn = self.buttons[row][col]
-        
-        if value == 'X':
-            btn.config(text='X', fg=self.COLORS['player_x'])
-        elif value == 'O':
-            btn.config(text='O', fg=self.COLORS['player_o'])
-    
-    def _computer_move(self) -> None:
-        """Führt den Zug des Computers aus."""
-        if not self.game_active:
-            return
-        
-        logger.info("Computer macht seinen Zug")
-        
-        # KI-Zug abrufen
-        if self.ai_module:
-            row, col = self.ai_module.get_best_move(
-                self.game_logic.board,
-                self.difficulty_var.get()
-            )
-        else:
-            # Fallback: Zufälliger Zug
-            row, col = self._get_random_empty_cell()
-        
-        if row is not None:
-            self._make_move(row, col)
-    
-    def _get_random_empty_cell(self) -> Optional[Tuple[int, int]]:
-        """
-        Findet eine zufällige leere Zelle.
+        Prüft ob es einen Gewinner gibt.
         
         Returns:
-            Tuple aus (row, col) oder None wenn keine leere Zelle existiert
+            True wenn es einen Gewinner gibt, sonst False
         """
-        import random
-        empty_cells = self.game_logic.get_empty_cells()
-        if empty_cells:
-            return random.choice(empty_cells)
-        return None
+        b = self.board
+        
+        # Zeilen prüfen
+        for row in range(3):
+            if b[row][0] == b[row][1] == b[row][2] != '':
+                self._highlight_winning_cells([(row, 0), (row, 1), (row, 2)])
+                return True
+        
+        # Spalten prüfen
+        for col in range(3):
+            if b[0][col] == b[1][col] == b[2][col] != '':
+                self._highlight_winning_cells([(0, col), (1, col), (2, col)])
+                return True
+        
+        # Diagonalen prüfen
+        if b[0][0] == b[1][1] == b[2][2] != '':
+            self._highlight_winning_cells([(0, 0), (1, 1), (2, 2)])
+            return True
+        
+        if b[0][2] == b[1][1] == b[2][0] != '':
+            self._highlight_winning_cells([(0, 2), (1, 1), (2, 0)])
+            return True
+        
+        return False
     
-    def _update_status(self) -> None:
-        """Aktualisiert die Status-Anzeige."""
-        if self.game_mode == 'pvc':
-            if self.current_player == 'X':
-                self.status_label.config(text="Du bist dran (X)")
-            else:
-                self.status_label.config(text="Computer denkt nach...")
-        else:
-            self.status_label.config(text=f"Spieler {self.current_player} ist dran")
-    
-    def _handle_game_end(self, message: str) -> None:
+    def _check_draw(self) -> bool:
         """
-        Behandelt das Ende des Spiels.
+        Prüft auf Unentschieden.
+        
+        Returns:
+            True wenn das Spiel unentschieden endet, sonst False
+        """
+        return all(cell != '' for row in self.board for cell in row)
+    
+    def _highlight_winning_cells(self, cells: list) -> None:
+        """
+        Hebt die Gewinnerzellen hervor.
         
         Args:
-            message: Nachricht, die angezeigt werden soll
+            cells: Liste von (row, col) Tupeln für die Gewinnerzellen
         """
-        self.game_active = False
-        self.status_label.config(text=message)
-        
-        logger.info(f"Spiel beendet: {message}")
-        
-        # Dialog anzeigen
-        self.root.after(100, lambda: messagebox.showinfo("Spiel beendet", message))
+        for row, col in cells:
+            self.buttons[row][col].config(bg=self.COLORS['win_highlight'])
     
-    def reset_game(self) -> None:
-        """Setzt das Spiel zurück und startet neu."""
-        logger.info("Spiel wird zurückgesetzt")
+    def _handle_game_end(self) -> None:
+        """Behandelt das Ende des Spiels bei einem Gewinner."""
+        self.game_over = True
         
-        # Spielelogik zurücksetzen
-        self.game_logic.reset()
+        if self.current_player == 'X':
+            self.player_wins += 1
+            winner_text = "Du hast gewonnen!"
+        else:
+            self.ai_wins += 1
+            winner_text = "Computer hat gewonnen!"
         
-        # Alle Buttons zurücksetzen
-        for row in range(3):
-            for col in range(3):
-                self.buttons[row][col].config(text="", fg=self.COLORS['grid'])
+        self._update_score()
+        self.status_label.config(text=winner_text, fg=self.COLORS['win_highlight'])
+        logger.info(f"Spiel beendet - Gewinner: {self.current_player}")
+        
+        # Nachricht anzeigen
+        self.root.after(100, lambda: messagebox.showinfo("Spiel beendet", winner_text))
+    
+    def _handle_draw(self) -> None:
+        """Behandelt ein Unentschieden."""
+        self.game_over = True
+        self.draws += 1
+        
+        self._update_score()
+        self.status_label.config(text="Unentschieden!", fg=self.COLORS['text_light'])
+        logger.info("Spiel beendet - Unentschieden")
+        
+        # Nachricht anzeigen
+        self.root.after(100, lambda: messagebox.showinfo("Spiel beendet", "Das Spiel endet unentschieden!"))
+    
+    def _update_status(self) -> None:
+        """Aktualisiert die Statusanzeige."""
+        self.status_label.config(
+            text=f"Spieler {self.current_player} ist dran",
+            fg=self.COLORS['text_light']
+        )
+    
+    def _update_score(self) -> None:
+        """Aktualisiert die Punktestand-Anzeige."""
+        self.score_label.config(text=self._get_score_text())
+    
+    def restart_game(self) -> None:
+        """Startet ein neues Spiel zurück."""
+        logger.info("Neues Spiel wird gestartet")
         
         # Spielstatus zurücksetzen
         self.current_player = 'X'
-        self.game_active = True
+        self.board = [['' for _ in range(3)] for _ in range(3)]
+        self.game_over = False
+        
+        # Buttons zurücksetzen
+        for row in range(3):
+            for col in range(3):
+                self.buttons[row][col].config(
+                    text='',
+                    bg=self.COLORS['button'],
+                    fg=self.COLORS['text']
+                )
+        
+        # Status aktualisieren
         self._update_status()
-    
-    def toggle_game_mode(self) -> None:
-        """Wechselt zwischen PvP- und PvC-Modus."""
-        if self.game_mode == 'pvp':
-            self.game_mode = 'pvc'
-            self.mode_btn.config(text="Modus: PvC")
-            self.difficulty_frame.pack(pady=10)
-            logger.info("Spielmodus gewechselt zu PvC")
-        else:
-            self.game_mode = 'pvp'
-            self.mode_btn.config(text="Modus: PvP")
-            self.difficulty_frame.pack_forget()
-            logger.info("Spielmodus gewechselt zu PvP")
-        
-        # Spiel zurücksetzen
-        self.reset_game()
-    
-    def set_difficulty(self) -> None:
-        """
-        Setzt den Schwierigkeitsgrad für den Computergegner.
-        Wird aufgerufen wenn der Benutzer eine Schwierigkeit auswählt.
-        """
-        difficulty = self.difficulty_var.get()
-        logger.info(f"Schwierigkeitsgrad gesetzt auf: {difficulty}")
-        
-        # Hier könnte die KI-Konfiguration angepasst werden
-        if self.ai_module:
-            self.ai_module.set_difficulty(difficulty)
+        logger.info("Spiel erfolgreich zurückgesetzt")
     
     def toggle_pause(self) -> None:
         """
         Pausiert oder setzt das Spiel fort.
-        Diese Methode ist für zukünftige Erweiterungen vorgesehen.
+        (Für zukünftige Erweiterungen)
         """
-        # Diese Funktion könnte für eine Pause-Funktion verwendet werden
         logger.info("Pause-Funktion aufgerufen (noch nicht implementiert)")
+        # Diese Methode kann für zukünftige Erweiterungen verwendet werden
+        # z.B. wenn ein Pause-Button hinzugefügt werden soll
     
-    def run(self) -> None:
-        """Startet die Tkinter-Hauptschleife."""
-        logger.info("Starte Hauptschleife des Spiels")
-        self.root.mainloop()
-    
-    def _on_close(self) -> None:
-        """Behandelt das Schließen des Fensters."""
-        logger.info("Fenster wird geschlossen")
-        self.root.destroy()
-
-
-def create_window(game_logic, ai_module=None) -> GameWindow:
-    """
-    Factory-Funktion zur Erstellung eines GameWindow-Objekts.
-    
-    Args:
-        game_logic: Instanz der GameLogic-Klasse
-        ai_module: Optionale Instanz der KI-Klasse
+    def set_difficulty(self, difficulty: str) -> None:
+        """
+        Setzt den Schwierigkeitsgrad der KI.
         
-    Returns:
-        GameWindow-Instanz
+        Args:
+            difficulty: Der Schwierigkeitsgrad ('easy', 'medium', 'hard')
+        """
+        logger.info(f"Schwierigkeitsgrad gesetzt auf: {difficulty}")
+        # Diese Methode kann für zukünftige Erweiterungen verwendet werden
+        # wenn verschiedene KI-Schwierigkeitsgrade implementiert werden sollen
+
+
+def create_window() -> Tuple[tk.Tk, GameWindow]:
     """
-    return GameWindow(game_logic, ai_module)
+    Erstellt das Hauptfenster und die GameWindow-Instanz.
+    
+    Returns:
+        Tuple aus (root, game_window)
+    """
+    root = tk.Tk()
+    game_window = GameWindow(root)
+    return root, game_window
+
+
+if __name__ == "__main__":
+    # Direkter Test des Moduls
+    root, game = create_window()
+    root.mainloop()
