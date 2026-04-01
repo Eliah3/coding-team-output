@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Tic-Tac-Toe Spiel mit Glücksrad - Ein interaktives Spiel für Jung und Alt">
+    <meta name="author" content="Development Team">
+    <meta name="keywords" content="Tic-Tac-Toe, Spiel, Glücksrad, Python, Desktop-Anwendung">
+    
+    <title>Tic-Tac-Toe mit Glücksrad</title>
+    
+    <style>
+        /* CSS Reset und Basis-Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        /* Glücksrad Container */
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 30px;
+        }
+        
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #ff6b6b 0deg 60deg,
+                #4ecdc4 60deg 120deg,
+                #45b7d1 120deg 180deg,
+                #96ceb4 180deg 240deg,
+                #ffeaa7 240deg 300deg,
+                #dfe6e9 300deg 360deg
+            );
+            border: 8px solid #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+            cursor: pointer;
+        }
+        
+        .wheel:hover {
+            transform: scale(1.02);
+        }
+        
+        .wheel-pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 30px solid #ff4757;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background-color: #fff;
+            border-radius: 50%;
+            border: 4px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Button Styles */
+        .spin-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .spin-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+        
+        .spin-button:active {
+            transform: translateY(0);
+        }
+        
+        .spin-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        /* Ergebnis-Anzeige */
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .result-text {
+            font-size: 1.3rem;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Tic-Tac-Toe</h1>
+        <p class="subtitle">Drehe das Glücksrad und finde dein Glück!</p>
+        
+        <!-- Glücksrad Container -->
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div class="wheel" id="wheel" role="img" aria-label="Glücksrad"></div>
+            <div class="wheel-center">START</div>
+        </div>
+        
+        <!-- Spin Button -->
+        <button class="spin-button" id="spinBtn" onclick="spinWheel()">
+            🎰 Drehen!
+        </button>
+        
+        <!-- Ergebnis Anzeige -->
+        <div class="result" id="result">
+            <p class="result-text" id="resultText"></p>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 Tic-Tac-Toe Projekt. Alle Rechte vorbehalten.</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Glücksrad Konfiguration
+        const wheel = document.getElementById('wheel');
+        const spinBtn = document.getElementById('spinBtn');
+        const result = document.getElementByResult('result');
+        const resultText = document.getElementById('resultText');
+        
+        // Segmente des Glücksrads
+        const segments = [
+            'X', 'O', 'Nochmal', 'O', 'X', 'Freilos'
+        ];
+        
+        // Farben für die Segmente
+        const colors = [
+            '#ff6b6b', '#4ecdc4', '#45b7d1', 
+            '#96ceb4', '#ffeaa7', '#dfe6e9'
+        ];
+        
+        let currentRotation = 0;
+        let isSpinning = false;
+        
+        /**
+         * Dreht das Glücksrad
+         */
+        function spinWheel() {
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            spinBtn.disabled = true;
+            result.classList.remove('show');
+            
+            // Zufällige Drehung zwischen 5 und 10 Umdrehungen
+            const spins = Math.floor(Math.random() * 5) + 5;
+            const degrees = Math.floor(Math.random() * 360);
+            const totalRotation = currentRotation + (spins * 360) + degrees;
+            
+            // CSS Transformation anwenden
+            wheel.style.transform = `rotate(${totalRotation}deg)`;
+            currentRotation = totalRotation;
+            
+            // Nach der Animation das Ergebnis anzeigen
+            setTimeout(() => {
+                showResult(degrees);
+                isSpinning = false;
+                spinBtn.disabled = false;
+            }, 3000);
+        }
+        
+        /**
+         * Zeigt das Ergebnis an
+         * @param {number} degrees - Der Gradwinkel der Landung
+         */
+        function showResult(degrees) {
+            // Berechne welches Segment gewonnen hat
+            const segmentAngle = 360 / segments.length;
+            const winningIndex = Math.floor(((degrees % 360) + segmentAngle / 2) / segmentAngle) % segments.length;
+            const winningSegment = segments[winningIndex];
+            
+            resultText.textContent = `Ergebnis: ${winningSegment}`;
+            result.classList.add('show');
+        }
+        
+        // Keyboard Accessibility
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !isSpinning) {
+                e.preventDefault();
+                spinWheel();
+            }
+        });
+    </script>
+</body>
+</html>
