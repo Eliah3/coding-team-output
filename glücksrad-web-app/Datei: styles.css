@@ -1,0 +1,295 @@
+/* ==========================================================================
+   CSS :root Variablen - Erklärung und Verwendung
+   ========================================================================== */
+
+/*
+ * Was ist :root?
+ * --------------
+ * :root ist ein CSS-Pseudo-Element, das das höchste Element im 
+ * Dokumentbaum repräsentiert. In HTML-Dokumenten ist dies immer das 
+ * <html>-Element.
+ * 
+ * :root hat eine höhere Spezifität als das html-Element selbst 
+ * (Spezifität: 0,1,0,0 vs 0,0,0,1).
+ * 
+ * Hauptverwendung:
+ * - Definieren von CSS Custom Properties (CSS-Variablen)
+ * - Globale Design-Werte festlegen, die im gesamten Stylesheet wiederverwendet werden
+ * - Zentrales Theme-Management ermöglichen
+ */
+
+/* ==========================================================================
+   Definition der :root-Variablen (CSS Custom Properties)
+   ========================================================================== */
+
+:root {
+    /* 
+     * Farbpalette (Colors)
+     * ---------------------
+     * Diese Variablen definieren das Farbschema der Anwendung.
+     * Durch Ändern dieser Werte an einer zentralen Stelle kann 
+     * das gesamte Farbschema schnell angepasst werden.
+     */
+    
+    /* Primärfarben */
+    --color-primary: #3498db;        /* Hauptfarbe für Buttons, Links, Akzente */
+    --color-primary-dark: #2980b9;   /* Dunklere Variante für Hover-Zustände */
+    --color-primary-light: #5dade2;  /* Hellere Variante für Hintergründe */
+    
+    /* Sekundärfarben */
+    --color-secondary: #2ecc71;      /* Ergänzende Farbe für Erfolge, Bestätigungen */
+    --color-secondary-dark: #27ae60;
+    
+    /* Akzentfarben */
+    --color-accent: #e74c3c;         /* Hervorhebungen, Fehler, Warnungen */
+    --color-accent-light: #ec7063;
+    
+    /* Neutralfarben */
+    --color-white: #ffffff;
+    --color-black: #000000;
+    --color-gray-100: #f8f9fa;       /* Sehr heller Hintergrund */
+    --color-gray-200: #e9ecef;       /* Heller Hintergrund */
+    --color-gray-300: #dee2e6;       /* Rahmen, Unterteilungen */
+    --color-gray-400: #ced4da;       /* Platzhaltertext */
+    --color-gray-500: #adb5bd;       /* Deaktivierter Text */
+    --color-gray-600: #6c757d;       /* Sekundärer Text */
+    --color-gray-700: #495057;       /* Haupttext */
+    --color-gray-800: #343a40;       /* Dunkler Text */
+    --color-gray-900: #212529;       /* Dunkelster Text */
+
+    /* 
+     * Typografie (Fonts & Text)
+     * --------------------------
+     * Zentrale Definition aller textbezogenen Werte für konsistentes Design.
+     */
+    
+    /* Schriftfamilien */
+    --font-family-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-family-secondary: 'Arial', Helvetica, sans-serif;
+    --font-family-mono: 'Courier New', Courier, monospace;  /* Für Code-Blöcke */
+    
+    /* Schriftgrößen */
+    --font-size-xs: 0.75rem;    /* 12px - Sehr kleine Texte, Labels */
+    --font-size-sm: 0.875rem;   /* 14px - Kleine Texte, Hilfetexte */
+    --font-size-base: 1rem;     /* 16px - Standard-Textgröße */
+    --font-size-lg: 1.125rem;   /* 18px - Vergrößerter Text */
+    --font-size-xl: 1.25rem;    /* 20px - Überschriften Ebene 3 */
+    --font-size-2xl: 1.5rem;    /* 24px - Überschriften Ebene 2 */
+    --font-size-3xl: 1.875rem;  /* 30px - Überschriften Ebene 1 */
+    --font-size-4xl: 2.25rem;   /* 36px - Hero-Überschriften */
+    
+    /* Schriftgewichte */
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    /* Zeilenhöhen */
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+
+    /* 
+     * Abstände (Spacing)
+     * -------------------
+     * Basierend auf einem konsistenten Raster (z.B. 4px, 8px, 16px System).
+     * Ermöglicht einheitliche Margins und Paddings im gesamten Design.
+     */
+    --spacing-xs: 0.25rem;   /* 4px */
+    --spacing-sm: 0.5rem;    /* 8px */
+    --spacing-md: 1rem;      /* 16px */
+    --spacing-lg: 1.5rem;    /* 24px */
+    --spacing-xl: 2rem;      /* 32px */
+    --spacing-2xl: 3rem;     /* 48px */
+    --spacing-3xl: 4rem;     /* 64px */
+
+    /* 
+     * Rahmen und Schatten (Borders & Shadows)
+     * ----------------------------------------
+     * Wiederverwendbare Border- und Shadow-Werte.
+     */
+    
+    /* Rahmen */
+    --border-radius-sm: 0.25rem;   /* 4px - Kleine Elemente */
+    --border-radius-md: 0.375rem;  /* 6px - Standard */
+    --border-radius-lg: 0.5rem;    /* 8px - Große Elemente */
+    --border-radius-xl: 1rem;      /* 16px - Karten, Modals */
+    --border-radius-full: 9999px;  /* Rund / Pillenform */
+    
+    /* Rahmenbreiten */
+    --border-width-thin: 1px;
+    --border-width-medium: 2px;
+    --border-width-thick: 4px;
+    
+    /* Schatten */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+    /* 
+     * Übergänge (Transitions)
+     * -----------------------
+     * Standard-Animationswerte für konsistente Bewegungseffekte.
+     */
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 250ms ease-in-out;
+    --transition-slow: 350ms ease-in-out;
+
+    /* 
+     * Z-Index Skala
+     * --------------
+     * Verhindert Konflikte bei der Stapelreihenfolge von Elementen.
+     */
+    --z-index-dropdown: 1000;
+    --z-index-sticky: 1020;
+    --z-index-fixed: 1030;
+    --z-index-modal-backdrop: 1040;
+    --z-index-modal: 1050;
+    --z-index-popover: 1060;
+    --z-index-tooltip: 1070;
+}
+
+/* ==========================================================================
+   Verwendung der :root-Variablen
+   ========================================================================== */
+
+/*
+ * Wie verwendet man :root-Variablen?
+ * ----------------------------------
+ * Mit der var() Funktion kann auf die definierten Variablen zugegriffen werden:
+ * 
+ *    selector {
+ *        property: var(--variablen-name);
+ *    }
+ * 
+ * Vorteile:
+ * - Zentrale Änderung: Einmal ändern, überall wirksam
+ * - Konsistenz: Einheitliche Werte im gesamten Projekt
+ * - Wartbarkeit: Leichter zu pflegen und zu aktualisieren
+ * - Lesbarkeit: Bedeutungsvolle Namen statt magischer Zahlen
+ */
+
+/* Beispiel: Grundlegendes Button-Styling mit :root Variablen */
+.button {
+    /* Farbe aus Variable */
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    
+    /* Typografie */
+    font-family: var(--font-family-primary);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    
+    /* Abstände */
+    padding: var(--spacing-sm) var(--spacing-lg);
+    margin: var(--spacing-md);
+    
+    /* Rahmen */
+    border: var(--border-width-thin) solid var(--color-primary-dark);
+    border-radius: var(--border-radius-md);
+    
+    /* Animation */
+    transition: background-color var(--transition-normal), 
+                transform var(--transition-fast);
+}
+
+/* Hover-Zustand mit Farbvariablen */
+.button:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Beispiel: Text-Styling */
+.text-heading {
+    font-family: var(--font-family-primary);
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-gray-900);
+    line-height: var(--line-height-tight);
+}
+
+/* Beispiel: Card-Komponente */
+.card {
+    background-color: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-lg);
+    border: var(--border-width-thin) solid var(--color-gray-200);
+}
+
+/* ==========================================================================
+   Fallback-Werte
+   ========================================================================== */
+
+/*
+ * Fallback-Werte bei var()
+ * -------------------------
+ * Die var() Funktion akzeptiert einen zweiten Parameter als Fallback:
+ * 
+ *    property: var(--custom-property, fallback-value);
+ * 
+ * Dies ist nützlich für:
+ * - Browser, die Custom Properties nicht unterstützen (sehr alt)
+ * - Wenn eine Variable nicht definiert ist
+ * - Als Zwischenwert während der Entwicklung
+ */
+
+/* Beispiel mit Fallback */
+.element {
+    /* Verwendet --color-primary, falls nicht definiert: blau */
+    color: var(--color-primary, #0000ff);
+    
+    /* Mehrere Fallbacks möglich */
+    font-size: var(--font-size-nonexistent, var(--font-size-base, 16px));
+}
+
+/* ==========================================================================
+   Dynamische Änderung mit JavaScript
+   ========================================================================== */
+
+/*
+ * :root Variablen zur Laufzeit ändern
+ * ------------------------------------
+ * Ein großer Vorteil von CSS Custom Properties ist, dass sie zur Laufzeit
+ * mit JavaScript geändert werden können:
+ * 
+ *    // Farbe ändern
+ *    document.documentElement.style.setProperty('--color-primary', '#ff0000');
+ * 
+ *    // Helligkeit anpassen (für Dark Mode)
+ *    document.documentElement.style.setProperty('--color-bg', '#1a1a1a');
+ * 
+ * Dies ermöglicht:
+ * - Dark/Light Mode Umschaltung
+ * - Themes zur Laufzeit wechseln
+ * - Benutzerdefinierte Farben
+ * - Animierte Farbübergänge
+ */
+
+/* Beispiel: Dark Mode Variablen (könnten per JavaScript aktiviert werden) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg-primary: #1a1a1a;
+        --color-bg-secondary: #2d2d2d;
+        --color-text-primary: #f8f9fa;
+        --color-text-secondary: #adb5bd;
+    }
+}
+
+/* ==========================================================================
+   Zusammenfassung
+   ========================================================================== */
+
+/*
+ * Best Practices für :root Variablen:
+ * 
+ * 1. Benennung: Verwende konsistente, beschreibende Namen (kebab-case)
+ * 2. Organisation: Gruppiere verwandte Variablen mit Kommentaren
+ * 3. Dokumentation: Kommentiere den Zweck jeder Variable
+ * 4. Wiederverwendung: Definiere Werte nur einmal, referenziere sie mehrfach
+ * 5. Fallbacks: Gib Fallback-Werte an, wo sinnvoll
+ * 6. Modularität: Verwende separate :root-Blöcke für verschiedene Themes
+ */
