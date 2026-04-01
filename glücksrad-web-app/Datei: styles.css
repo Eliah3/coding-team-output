@@ -1,0 +1,271 @@
+/* ============================================
+   TICTACTOE SPIEL - STYLESHEET
+   ============================================
+   Dieses Stylesheet definiert das visuelle Design
+   des Tic-Tac-Toe-Spiels. Die Struktur ist modular
+   aufgebaut und in logische Sektionen unterteilt.
+*/
+
+/* ============================================
+   1. GRUNDEINSTELLUNGEN (CSS Reset & Variablen)
+   ============================================
+   Hier werden globale Variablen für Farben und
+   grundlegende Reset-Styles definiert, die auf
+   der gesamten Seite angewendet werden.
+*/
+
+:root {
+    /* Farbpalette - Zentral definiert für einfache Änderungen */
+    --primary-color: #2c3e50;      /* Dunkelblau - Hauptfarbe für Hintergründe */
+    --secondary-color: #3498db;    /* Hellblau - Akzentfarbe für Buttons */
+    --accent-x-color: #e74c3c;     /* Rot - Farbe für X-Symbole */
+    --accent-o-color: #2ecc71;     /* Grün - Farbe für O-Symbole */
+    --text-color: #ecf0f1;         /* Weiß-Grau - Haupttextfarbe */
+    --bg-color: #1a1a2e;           /* Dunkles Blau - Hintergrund der Seite */
+    --cell-bg: #16213e;            /* Etwas heller - Hintergrund der Zellen */
+    --cell-hover: #1f3460;         /* Hover-Zustand der Zellen */
+    
+    /* Abstände und Größen */
+    --cell-size: 100px;            /* Größe einer Spielfeldzelle */
+    --gap-size: 10px;              /* Abstand zwischen Zellen */
+    --border-radius: 8px;          /* Abgerundete Ecken */
+}
+
+/* Basis-Reset - Entfernt Standardabstände */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ============================================
+   2. HAUPTLAYOUT (Body & Container)
+   ============================================
+   Definiert das Grundlayout der Seite, einschließlich
+   Hintergrund, Schriftart und zentrierter Ausrichtung.
+*/
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+/* Hauptcontainer für das Spiel */
+.game-container {
+    text-align: center;
+    padding: 20px;
+}
+
+/* ============================================
+   3. TITEL & STATUSANZEIGE
+   ============================================
+   Styling für Überschriften und die Anzeige
+   des aktuellen Spielstands/Spielers.
+*/
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: var(--secondary-color);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Statusanzeige - Zeigt aktuellen Spieler oder Gewinner */
+.status {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    border-radius: var(--border-radius);
+    display: inline-block;
+}
+
+/* ============================================
+   4. SPIELFELD (Grid-Layout)
+   ============================================
+   Das 3x3-Spielfeld wird mit CSS Grid erstellt.
+   Jede Zelle ist ein klickbares Element.
+*/
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(3, var(--cell-size));
+    grid-template-rows: repeat(3, var(--cell-size));
+    gap: var(--gap-size);
+    margin: 20px auto;
+    background-color: var(--primary-color);
+    padding: var(--gap-size);
+    border-radius: var(--border-radius);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Einzelne Zelle im Spielfeld */
+.cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    background-color: var(--cell-bg);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 3rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Hover-Effekt für leere Zellen */
+.cell:hover:not(.taken) {
+    background-color: var(--cell-hover);
+    transform: scale(1.02);
+}
+
+/* Zelle ist bereits belegt */
+.cell.taken {
+    cursor: not-allowed;
+}
+
+/* Farbe für X-Symbol */
+.cell.x {
+    color: var(--accent-x-color);
+}
+
+/* Farbe für O-Symbol */
+.cell.o {
+    color: var(--accent-o-color);
+}
+
+/* ============================================
+   5. STEUERELEMENTE (Buttons)
+   ============================================
+   Styling für Buttons wie "Neues Spiel" und
+   Schwierigkeitsgrad-Auswahl.
+*/
+
+.controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text-color);
+    background-color: var(--secondary-color);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover-Effekt für Buttons */
+.btn:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Button beim Klicken */
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Reset-Button (andere Farbe) */
+.btn-reset {
+    background-color: var(--accent-x-color);
+}
+
+.btn-reset:hover {
+    background-color: #c0392b;
+}
+
+/* ============================================
+   6. SCHWIERIGKEITSGRAD-AUSWAHL
+   ============================================
+   Styling für die Auswahl der KI-Schwierigkeit.
+*/
+
+.difficulty-selector {
+    margin-top: 15px;
+}
+
+.difficulty-selector label {
+    margin-right: 10px;
+    font-size: 1rem;
+}
+
+.difficulty-selector select {
+    padding: 8px 12px;
+    font-size: 1rem;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--secondary-color);
+    background-color: var(--cell-bg);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+/* ============================================
+   7. GEWINNER-MARKIERUNG
+   ============================================
+   Visuelle Hervorhebung der Gewinnlinie
+   wenn jemand gewonnen hat.
+*/
+
+.cell.winner {
+    background-color: var(--accent-o-color);
+    animation: pulse 1s infinite;
+}
+
+/* Animations-Keyframe für Gewinnerzellen */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* ============================================
+   8. RESPONSIVE DESIGN
+   ============================================
+   Anpassungen für kleinere Bildschirme
+   wie Smartphones und Tablets.
+*/
+
+@media (max-width: 480px) {
+    :root {
+        --cell-size: 80px;
+        --gap-size: 5px;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    .status {
+        font-size: 1.2rem;
+    }
+    
+    .cell {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 360px) {
+    :root {
+        --cell-size: 70px;
+    }
+}
