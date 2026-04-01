@@ -1,0 +1,438 @@
+/* ============================================
+   GLÜCKSRAD DESIGN - CSS STYLES
+   ============================================ */
+
+/* CSS Reset und Basis-Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Primäre Farben */
+    --primary-color: #2c3e50;
+    --secondary-color: #e74c3c;
+    --accent-color: #f39c12;
+    --text-color: #ecf0f1;
+    --bg-color: #1a1a2e;
+    
+    /* Rad-Segmente Farben */
+    --segment-1: #e74c3c;
+    --segment-2: #3498db;
+    --segment-3: #2ecc71;
+    --segment-4: #f39c12;
+    --segment-5: #9b59b6;
+    --segment-6: #1abc9c;
+    --segment-7: #e67e22;
+    --segment-8: #34495e;
+    
+    /* Animation */
+    --spin-duration: 5s;
+    --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Body und Hauptcontainer */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-color);
+    background-image: 
+        radial-gradient(ellipse at top, #16213e 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, #0f3460 0%, transparent 50%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text-color);
+}
+
+/* Hauptüberschrift */
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(135deg, var(--accent-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Glücksrad Container */
+.wheel-container {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    margin: 20px auto;
+}
+
+/* Das Glücksrad */
+.wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 
+        0 0 0 10px var(--primary-color),
+        0 0 0 14px var(--accent-color),
+        0 0 40px rgba(0, 0, 0, 0.5),
+        inset 0 0 30px rgba(0, 0, 0, 0.3);
+    transition: transform var(--spin-duration) var(--ease-out);
+    transform: rotate(0deg);
+}
+
+/* Spin-Animation Klasse */
+.wheel.spinning {
+    transform: rotate(1440deg); /* 4 vollständige Umdrehungen */
+}
+
+/* Rad-Segmente */
+.wheel-segment {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    transform-origin: 100% 100%;
+    left: 50%;
+    top: 50%;
+    clip-path: polygon(0 100%, 100% 100%, 100% 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wheel-segment::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transform: rotate(45deg) skew(15deg, 15deg);
+    transform-origin: bottom right;
+}
+
+/* Segment Farben und Rotation */
+.segment-1 {
+    background: var(--segment-1);
+    transform: rotate(0deg) skewY(-45deg);
+}
+
+.segment-2 {
+    background: var(--segment-2);
+    transform: rotate(45deg) skewY(-45deg);
+}
+
+.segment-3 {
+    background: var(--segment-3);
+    transform: rotate(90deg) skewY(-45deg);
+}
+
+.segment-4 {
+    background: var(--segment-4);
+    transform: rotate(135deg) skewY(-45deg);
+}
+
+.segment-5 {
+    background: var(--segment-5);
+    transform: rotate(180deg) skewY(-45deg);
+}
+
+.segment-6 {
+    background: var(--segment-6);
+    transform: rotate(225deg) skewY(-45deg);
+}
+
+.segment-7 {
+    background: var(--segment-7);
+    transform: rotate(270deg) skewY(-45deg);
+}
+
+.segment-8 {
+    background: var(--segment-8);
+    transform: rotate(315deg) skewY(-45deg);
+}
+
+/* Segment-Nummern */
+.segment-number {
+    position: absolute;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    transform: rotate(22.5deg) translate(120px) rotate(-22.5deg);
+}
+
+/* Center-Kreis des Rads */
+.wheel-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+    border-radius: 50%;
+    box-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.3),
+        inset 0 2px 5px rgba(255, 255, 255, 0.8);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wheel-center::after {
+    content: '🎯';
+    font-size: 2rem;
+}
+
+/* Pointer/Pfeil */
+.pointer {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 40px solid var(--secondary-color);
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+    z-index: 30;
+    animation: pointer-bounce 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes pointer-bounce {
+    from {
+        transform: translateX(-50%) translateY(0);
+    }
+    to {
+        transform: translateX(-50%) translateY(5px);
+    }
+}
+
+/* Spin-Button */
+.spin-button {
+    margin-top: 40px;
+    padding: 18px 60px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: white;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #c0392b 100%);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 
+        0 6px 20px rgba(231, 76, 60, 0.4),
+        0 3px 0 #962d22;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.spin-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.spin-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+        0 10px 30px rgba(231, 76, 60, 0.5),
+        0 5px 0 #962d22;
+}
+
+.spin-button:hover::before {
+    left: 100%;
+}
+
+.spin-button:active {
+    transform: translateY(2px);
+    box-shadow: 
+        0 3px 10px rgba(231, 76, 60, 0.4),
+        0 1px 0 #962d22;
+}
+
+.spin-button:disabled {
+    background: linear-gradient(135deg, #7f8c8d 0%, #606c70 100%);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Ergebnis-Anzeige */
+.result-display {
+    margin-top: 30px;
+    padding: 20px 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease;
+}
+
+.result-display.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.result-display span {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+/* Gewinn-Animation */
+.result-display .win {
+    color: var(--segment-3);
+    animation: win-pulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes win-pulse {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.1);
+    }
+}
+
+/* Score-Anzeige */
+.score-container {
+    display: flex;
+    gap: 40px;
+    margin-top: 20px;
+}
+
+.score-box {
+    text-align: center;
+    padding: 15px 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.score-box h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    opacity: 0.7;
+}
+
+.score-box .score {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+/* Responsive Design */
+@media (max-width: 500px) {
+    .wheel-container {
+        width: 300px;
+        height: 300px;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    .segment-number {
+        transform: rotate(22.5deg) translate(90px) rotate(-22.5deg);
+        font-size: 1.2rem;
+    }
+    
+    .wheel-center {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .spin-button {
+        padding: 15px 40px;
+        font-size: 1.1rem;
+    }
+}
+
+/* Zusätzliche Effekte */
+
+/* Glüheffekt um das Rad */
+.wheel-container::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background: radial-gradient(circle, rgba(243, 156, 18, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+    animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+/* Hintergrund-Decoration */
+.decoration {
+    position: fixed;
+    font-size: 3rem;
+    opacity: 0.1;
+    z-index: -1;
+}
+
+.decoration-1 {
+    top: 10%;
+    left: 10%;
+    animation: float 6s ease-in-out infinite;
+}
+
+.decoration-2 {
+    top: 20%;
+    right: 15%;
+    animation: float 8s ease-in-out infinite reverse;
+}
+
+.decoration-3 {
+    bottom: 15%;
+    left: 20%;
+    animation: float 7s ease-in-out infinite;
+}
+
+.decoration-4 {
+    bottom: 25%;
+    right: 10%;
+    animation: float 5s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-20px) rotate(10deg);
+    }
+}
