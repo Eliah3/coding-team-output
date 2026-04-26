@@ -1,0 +1,2 @@
+## Lizenz
+`dirsize-report` ist unter der MIT-Lizenz verfügbar.
