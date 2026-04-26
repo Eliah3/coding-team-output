@@ -1,0 +1,1 @@
+- Scanne das Verzeichnis `/path/to/dir` und schreibe die Ergebnisse in eine Datei namens `results.csv`:
