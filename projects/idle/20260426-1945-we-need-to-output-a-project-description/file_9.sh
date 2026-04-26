@@ -1,0 +1,1 @@
+dirsize-report [OPTIONEN] VERZEICHNIS
