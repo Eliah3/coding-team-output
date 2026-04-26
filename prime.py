@@ -1,1 +1,0 @@
-Erwartete Ausgabe:
