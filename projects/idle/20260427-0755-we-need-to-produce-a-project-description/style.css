@@ -1,0 +1,193 @@
+/* --- Grundlegendes Reset und Variablen --- */
+:root {
+    --bg-color: #2c3e50;
+    --card-back: #34495e;
+    --card-front: #ecf0f1;
+    --accent: #e74c3c;
+    --text-color: #ecf0f1;
+    --font-main: 'Poppins', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* --- Header & Stats --- */
+header {
+    text-align: center;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+h1 {
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.stats-container {
+    display: flex;
+    justify-content: space-around;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+    width: 100%;
+}
+
+.stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.value {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* --- Controls --- */
+.controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+select {
+    padding: 8px;
+    border-radius: 5px;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.btn {
+    padding: 8px 16px;
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.btn:hover {
+    background-color: #c0392b;
+}
+
+/* --- Game Board (Grid) --- */
+.game-board {
+    display: grid;
+    grid-gap: 10px;
+    width: 100%;
+    perspective: 1000px; /* Wichtig für 3D Flip */
+}
+
+/* Responsive Grid Anpassungen */
+@media (max-width: 600px) {
+    .game-board {
+        grid-template-columns: repeat(3, 1fr); /* Mobile: 3 Spalten */
+    }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+    .game-board {
+        grid-template-columns: repeat(4, 1fr); /* Tablet: 4 Spalten */
+    }
+}
+
+@media (min-width: 901px) {
+    .game-board {
+        grid-template-columns: repeat(4, 1fr); /* Desktop: 4 Spalten (oder mehr je nach Kartenanzahl) */
+    }
+}
+
+/* --- Card Styles --- */
+.card {
+    background-color: transparent;
+    aspect-ratio: 3 / 4; /* Kartenformat */
+    cursor: pointer;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+}
+
+.card.flip {
+    transform: rotateY(180deg);
+}
+
+/* Um zu verhindern, dass doppelt geklickt wird */
+.card.disabled {
+    pointer-events: none;
+}
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden; /* Versteckt die Rückseite bei Rotation */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    font-size: 2rem; /* Größe des Emojis/Bildes */
+    user-select: none;
+}
+
+.card-front {
+    background-color: var(--card-front);
+    transform: rotateY(180deg); /* Vorderseite ist initially gedreht */
+    color: #333;
+}
+
+.card-back {
+    background-color: var(--card-back);
+    background-image: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="2" fill="rgba(255,255,255,0.2)"/></svg>'); /* Einfaches Muster */
+}
+
+/* --- Win Message --- */
+.win-message {
+    margin-top: 20px;
+    text-align: center;
+    color: #2ecc71;
+    animation: fadeIn 0.5s;
+}
+
+.hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
