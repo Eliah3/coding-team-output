@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TicTacToe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1 id="title">TicTacToe</h1>
+    </header>
+
+    <main>
+        <!-- Statusbereich: Wichtig für Screen Reader (aria-live) -->
+        <div id="status" aria-live="polite">Spieler X ist am Zug</div>
+
+        <!-- Spielbrett: 3x3 Grid -->
+        <section id="board" aria-label="Spielbrett">
+            <!-- Buttons werden durch JavaScript generiert -->
+        </section>
+
+        <!-- Reset Button -->
+        <button id="reset-btn" aria-label="Spiel zurücksetzen">Neues Spiel</button>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
