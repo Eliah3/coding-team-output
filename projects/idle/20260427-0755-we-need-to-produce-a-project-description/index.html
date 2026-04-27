@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Spiel - Interaktiv</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Optional: Google Font für schöne Typografie -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header Bereich: Titel und Statistiken -->
+        <header>
+            <h1>Memory Spiel</h1>
+            <div class="stats-container">
+                <div class="stat-box">
+                    <span class="label">Züge</span>
+                    <span id="moves" class="value">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">Punkte</span>
+                    <span id="score" class="value">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">Zeit</span>
+                    <span id="timer" class="value">00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Steuerungsbereich: Schwierigkeit und Neustart -->
+        <div class="controls">
+            <div class="difficulty-selector">
+                <label for="difficulty">Schwierigkeit:</label>
+                <select id="difficulty">
+                    <option value="6">Einfach (6 Paare)</option>
+                    <option value="8" selected>Mittel (8 Paare)</option>
+                    <option value="12">Schwer (12 Paare)</option>
+                </select>
+            </div>
+            <button id="restart-btn" class="btn">Spiel Neustarten</button>
+        </div>
+
+        <!-- Spielbrett (Grid) -->
+        <div class="game-board" id="game-board">
+            <!-- Karten werden hier per JavaScript eingefügt -->
+        </div>
+        
+        <!-- Siegesnachricht (versteckt) -->
+        <div id="win-message" class="win-message hidden">
+            <h2>Herzlichen Glückwunsch!</h2>
+            <p>Du hast gewonnen!</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
