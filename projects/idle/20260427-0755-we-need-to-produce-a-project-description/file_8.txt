@@ -1,0 +1,3 @@
+### Test-Dateien
+
+Um das Spiel zu testen, können Sie die folgenden Testfälle verwenden:
