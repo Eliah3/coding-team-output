@@ -1,0 +1,115 @@
+/* --- Reset & Basis-Styles --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #fafafa;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+h1 {
+    margin-bottom: 1rem;
+    font-size: 2.5rem;
+}
+
+/* --- Statusanzeige --- */
+#status {
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-weight: bold;
+    min-height: 1.5rem; /* Verhindert Springen bei leerer Meldung */
+}
+
+/* --- Spielbrett (Grid) --- */
+#board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    width: 300px;
+    aspect-ratio: 1 / 1; /* Quadratisch */
+    margin-bottom: 1.5rem;
+}
+
+/* --- Zellen (Buttons) --- */
+#board button {
+    background-color: #fff;
+    border: 2px solid #333;
+    border-radius: 8px;
+    font-size: 2.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    transition: background-color 0.2s, transform 0.1s;
+    /* Sicherstellen, dass Buttons groß genug für Touch sind */
+    min-width: 44px;
+    min-height: 44px;
+}
+
+/* Hover-Effekt für Mausnutzer */
+#board button:hover:not(:disabled) {
+    background-color: #f0f0f0;
+}
+
+/* Fokus-Status für Tastaturnavigation (Barrierefreiheit) */
+#board button:focus-visible {
+    outline: 3px solid #0066cc;
+    outline-offset: 2px;
+}
+
+/* --- Zustände --- */
+/* Gewonnene Zellen */
+#board button.win {
+    background-color: #c8e6c9; /* Hellgrün */
+    border-color: #2e7d32;
+}
+
+/* Deaktivierte Zellen (belegt oder Spiel vorbei) */
+#board button:disabled {
+    cursor: default;
+    opacity: 0.8;
+}
+
+/* --- Reset Button --- */
+#reset-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    background-color: #333;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#reset-btn:hover {
+    background-color: #555;
+}
+
+#reset-btn:focus-visible {
+    outline: 3px solid #0066cc;
+    outline-offset: 2px;
+}
+
+/* --- Responsivität --- */
+@media (max-width: 400px) {
+    #board {
+        width: 90vw; /* Nimmt 90% der Breite auf kleinen Screens */
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+}
