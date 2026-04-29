@@ -1,0 +1,1 @@
+dotnet add package Hardcodet.NotifyIcon.Wpf   # nur für WPF‑Tray‑Icon
