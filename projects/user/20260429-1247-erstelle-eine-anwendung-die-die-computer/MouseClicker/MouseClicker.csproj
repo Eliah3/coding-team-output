@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Ziel-Framework: Windows Desktop mit WPF -->
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <AssemblyName>MouseClicker</AssemblyName>
+    <RootNamespace>MouseClicker</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>Orchestrator Plan</Authors>
+    <Description>Ein einfaches Tool, das automatische Mausklicks ausfuehrt.</Description>
+  </PropertyGroup>
+
+</Project>
