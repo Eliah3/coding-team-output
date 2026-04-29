@@ -1,0 +1,7 @@
+**Edge-Cases**
+
+Um die Edge-Cases abzudecken, können wir weitere Tests erstellen, die die folgenden Szenarien überprüfen:
+
+*   Was passiert, wenn der Benutzer den Start-Button mehrmals klickt, während der Service bereits läuft?
+*   Was passiert, wenn der Benutzer den Stop-Button klickt, während der Service nicht läuft?
+*   Was passiert, wenn der Benutzer das Fenster schließt, während der Service läuft?
